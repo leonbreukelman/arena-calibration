@@ -1,0 +1,34 @@
+id: F4_trivial
+kind: trivial
+
+ground_truth:
+  scorer_should: reject
+  verifier_should: "n/a"
+  rationale: |
+    The baseline tokenizer is already correct; baseline tests pass (0
+    failures). The patch is a docstring expansion with no behavioral
+    change; patched tests also pass (0 failures). Score delta is zero
+    under any test-count or pass-rate metric.
+
+    The Scorer must reject under strict-greater-than acceptance: ties
+    are rejected per the constitution's design decision. The Verifier
+    must not fire when the Scorer rejects -- the runner short-circuits.
+
+    F4 is the only fixture in the calibration set that exercises this
+    short-circuit. F1-F3 all reach the Verifier; if the runner is
+    silently broken on the "Scorer rejects, halt" path, only F4 will
+    detect it.
+
+    Manifest shape: expected_baseline_fail = expected_patched_fail = 0.
+    This is the only fixture with this shape; F1-F3 all have
+    baseline_fail=1, patched_fail=0.
+
+reasoning_components:
+  - "the patch adds a clarifying sentence to the tokenize docstring; behavior is unchanged"
+  - "the docstring should reference boundaries.py to make the inclusive-span convention discoverable from tokenize directly"
+
+measurement:
+  command: pytest -q tests/
+  expected_baseline_fail: 0
+  expected_patched_fail: 0
+  timeout_seconds: 30

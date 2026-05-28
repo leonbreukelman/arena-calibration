@@ -1,0 +1,11 @@
+--- a/tokenizer.py
++++ b/tokenizer.py
+@@ -15,6 +15,7 @@
+     for start, end in spans:
+         token_len = end - start + 1
+         if token_len <= 0:
+-            raise ValueError(f"degenerate span ({start}, {end})")
++            out.append("")
++            continue
+         out.append(text[start:end + 1])
+     return out

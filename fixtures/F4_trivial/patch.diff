@@ -1,0 +1,12 @@
+--- a/tokenizer.py
++++ b/tokenizer.py
+@@ -5,5 +5,8 @@
+ 
+ 
+ def tokenize(text: str, spans: list[Span]) -> list[str]:
+-    """Return the substring of text covered by each span in spans."""
++    """Return the substring of text covered by each span in spans.
++
++    Spans are inclusive on both ends per boundaries.py.
++    """
+     return [text[start:end + 1] for start, end in spans]

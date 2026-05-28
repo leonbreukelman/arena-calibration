@@ -1,0 +1,29 @@
+# Python runtime/cache artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyright/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+
+# Build/install artifacts
+build/
+dist/
+*.egg-info/
+
+# Local secrets/config
+.env
+.env.*
+!.env.example
+
+# Harness run outputs
+results/
+
+# Accidental empty shell-expansion artifact from local setup
+{arena,fixtures/

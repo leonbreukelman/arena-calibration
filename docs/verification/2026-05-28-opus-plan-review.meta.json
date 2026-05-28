@@ -1,0 +1,22 @@
+{
+  "command": [
+    "claude",
+    "-p",
+    "[PLAN_REVIEW_PROMPT]",
+    "--model",
+    "opus",
+    "--effort",
+    "max",
+    "--tools",
+    "",
+    "--output-format",
+    "json",
+    "--max-turns",
+    "1",
+    "--no-session-persistence",
+    "--disable-slash-commands"
+  ],
+  "returncode": 0,
+  "stdout_path": "/home/leonb/projects/build-arena/docs/verification/2026-05-28-opus-plan-review.stdout.json",
+  "stderr_path": "/home/leonb/projects/build-arena/docs/verification/2026-05-28-opus-plan-review.stderr.txt"
+}
