@@ -22,6 +22,7 @@ from typing import Any
 
 import yaml
 
+from arena.api_llm import DEFAULT_TIMEOUT_SECONDS, PROVIDER_CONFIGS, build_api_models
 from arena.cli_llm import build_cli_models
 from arena.fixtures import (
     Fixture,
@@ -29,11 +30,42 @@ from arena.fixtures import (
     VerifierVerdict,
     load_all_fixtures,
 )
+from arena.lanham import all_perturbations, unperturbed
+from arena.llm import (
+    JUDGE_MAX_TOKENS,
+    JUDGE_MODEL,
+    WORKER_MAX_TOKENS,
+    WORKER_MODEL,
+    _JUDGE_SYSTEM,
+    _REGEN_SYSTEM,
+    build_judge_prompt,
+    build_regen_prompt,
+)
 from arena.scorer import ScoreReport, score
-from arena.verifier import IS_STUB, VerifyReport, verify
+from arena.verifier import IS_STUB, N_SAMPLES, VerifyReport, _read_baseline_file, verify
 
 # Sentinel used in the output YAML when the Verifier is short-circuited.
 VERIFIER_NOT_INVOKED = "not_invoked"
+API_PROVIDERS = frozenset(PROVIDER_CONFIGS)
+CLI_PROVIDERS = frozenset({"claude-code", "codex", "copilot"})
+ALL_PROVIDERS = ("anthropic", "xai", "gemini", "openrouter", "claude-code", "codex", "copilot")
+@dataclass(frozen=True)
+class ModelCallPlan:
+    provider: str
+    worker_model: str
+    judge_model: str
+    promoted_fixtures: list[str]
+    worker_calls: int
+    judge_calls: int
+    total_model_calls: int
+    worker_input_chars: int
+    judge_input_chars: int
+    rough_worker_input_tokens: int
+    rough_judge_input_tokens: int
+    rough_input_tokens: int
+    worst_case_worker_output_tokens: int
+    worst_case_judge_output_tokens: int
+    worst_case_output_tokens: int
 
 
 @dataclass(frozen=True)
@@ -56,6 +88,122 @@ class FixtureRow:
     integrity: str
     integrity_notes: list[str]
     notes: list[str]
+
+
+def _rough_token_count(chars: int) -> int:
+    return (chars + 3) // 4
+
+
+def _resolve_plan_models(
+    provider: str,
+    worker_model: str | None,
+    judge_model: str | None,
+) -> tuple[str, str]:
+    if provider == "anthropic":
+        return worker_model or WORKER_MODEL, judge_model or JUDGE_MODEL
+    if provider in API_PROVIDERS:
+        config = PROVIDER_CONFIGS[provider]
+        return (
+            worker_model or config.default_worker_model,
+            judge_model or config.default_judge_model,
+        )
+    return worker_model or "(cli default)", judge_model or "(cli default)"
+
+
+def _judge_prompt_chars(fixture: Fixture) -> int:
+    summary_lines = [
+        f"  c{i}: load_bearing=<unknown> (<unknown>/4)"
+        for i, _component in enumerate(fixture.reasoning_components)
+    ]
+    summary_text = "\n".join(summary_lines)
+    prompt = build_judge_prompt(fixture.id, summary_text)
+    return len(_JUDGE_SYSTEM) + len(prompt)
+
+
+def plan_model_calls(
+    fixtures_dir: Path,
+    provider: str,
+    worker_model: str | None = None,
+    judge_model: str | None = None,
+) -> ModelCallPlan:
+    """Plan live model calls without constructing model adapters or invoking verifier."""
+    worker_name, judge_name = _resolve_plan_models(provider, worker_model, judge_model)
+    fixtures = load_all_fixtures(fixtures_dir)
+    promoted: list[str] = []
+    worker_calls = 0
+    judge_calls = 0
+    worker_input_chars = 0
+    judge_input_chars = 0
+
+    for fixture in fixtures:
+        score_rep = score(fixture)
+        if score_rep.verdict != ScorerVerdict.PROMOTE:
+            continue
+        promoted.append(fixture.id)
+        components = list(fixture.reasoning_components)
+        target_path, baseline_source = _read_baseline_file(fixture)
+
+        reference_prompt = build_regen_prompt(
+            target_path=target_path,
+            file_contents=baseline_source,
+            reasoning=unperturbed(components),
+        )
+        worker_calls += N_SAMPLES
+        worker_input_chars += N_SAMPLES * (len(_REGEN_SYSTEM) + len(reference_prompt))
+
+        for i in range(len(components)):
+            for perturbed in all_perturbations(components, i):
+                prompt = build_regen_prompt(
+                    target_path=target_path,
+                    file_contents=baseline_source,
+                    reasoning=perturbed.text,
+                )
+                worker_calls += N_SAMPLES
+                worker_input_chars += N_SAMPLES * (len(_REGEN_SYSTEM) + len(prompt))
+
+        judge_calls += 1
+        judge_input_chars += _judge_prompt_chars(fixture)
+
+    worst_worker_output = worker_calls * WORKER_MAX_TOKENS
+    worst_judge_output = judge_calls * JUDGE_MAX_TOKENS
+    rough_worker_input = _rough_token_count(worker_input_chars)
+    rough_judge_input = _rough_token_count(judge_input_chars)
+    return ModelCallPlan(
+        provider=provider,
+        worker_model=worker_name,
+        judge_model=judge_name,
+        promoted_fixtures=promoted,
+        worker_calls=worker_calls,
+        judge_calls=judge_calls,
+        total_model_calls=worker_calls + judge_calls,
+        worker_input_chars=worker_input_chars,
+        judge_input_chars=judge_input_chars,
+        rough_worker_input_tokens=rough_worker_input,
+        rough_judge_input_tokens=rough_judge_input,
+        rough_input_tokens=rough_worker_input + rough_judge_input,
+        worst_case_worker_output_tokens=worst_worker_output,
+        worst_case_judge_output_tokens=worst_judge_output,
+        worst_case_output_tokens=worst_worker_output + worst_judge_output,
+    )
+
+
+def _print_dry_run(plan: ModelCallPlan) -> None:
+    print("dry_run: true")
+    print(f"provider: {plan.provider}")
+    print(f"worker_model: {plan.worker_model}")
+    print(f"judge_model: {plan.judge_model}")
+    print(f"promoted_fixtures: {', '.join(plan.promoted_fixtures)}")
+    print(f"worker_calls: {plan.worker_calls}")
+    print(f"judge_calls: {plan.judge_calls}")
+    print(f"total_model_calls: {plan.total_model_calls}")
+    print(f"worker_input_chars: {plan.worker_input_chars}")
+    print(f"judge_input_chars: {plan.judge_input_chars}")
+    print(f"rough_worker_input_tokens: {plan.rough_worker_input_tokens}")
+    print(f"rough_judge_input_tokens: {plan.rough_judge_input_tokens}")
+    print(f"rough_input_tokens: {plan.rough_input_tokens}")
+    print(f"worst_case_worker_output_tokens: {plan.worst_case_worker_output_tokens}")
+    print(f"worst_case_judge_output_tokens: {plan.worst_case_judge_output_tokens}")
+    print(f"worst_case_output_tokens: {plan.worst_case_output_tokens}")
 
 
 def _evaluate(
@@ -243,19 +391,19 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--llm-provider",
-        choices=["anthropic", "claude-code", "codex", "copilot"],
+        choices=ALL_PROVIDERS,
         default="anthropic",
-        help="LLM backend provider (default: anthropic API)",
+        help="LLM backend provider (default: anthropic API; live run requires --confirm-live)",
     )
     parser.add_argument(
         "--worker-model",
         default=None,
-        help="CLI provider worker model override; ignored for anthropic",
+        help="Worker model override for API/CLI providers; anthropic overrides are plan-only",
     )
     parser.add_argument(
         "--judge-model",
         default=None,
-        help="CLI provider judge model override; ignored for anthropic",
+        help="Judge model override for API/CLI providers; anthropic overrides are plan-only",
     )
     parser.add_argument(
         "--cli-effort",
@@ -268,11 +416,70 @@ def main(argv: list[str] | None = None) -> int:
         default=180,
         help="Per CLI model call timeout in seconds",
     )
+    parser.add_argument(
+        "--api-timeout",
+        type=int,
+        default=DEFAULT_TIMEOUT_SECONDS,
+        help="Per API model call timeout in seconds",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Plan live model calls and budget exposure without constructing model adapters",
+    )
+    parser.add_argument(
+        "--confirm-live",
+        action="store_true",
+        help="Required to execute any live model run",
+    )
+    parser.add_argument(
+        "--max-model-calls",
+        type=int,
+        default=None,
+        help="Abort before live execution if planned model calls exceed this ceiling",
+    )
     args = parser.parse_args(argv)
+
+    plan = plan_model_calls(
+        args.fixtures_dir,
+        provider=args.llm_provider,
+        worker_model=args.worker_model,
+        judge_model=args.judge_model,
+    )
+
+    if args.dry_run:
+        _print_dry_run(plan)
+        return 0
+
+    if not args.confirm_live:
+        print(
+            "refusing live model run: pass --dry-run to inspect call counts or "
+            "--confirm-live to spend API/subscription quota",
+            file=sys.stderr,
+        )
+        return 2
+
+    if (
+        args.max_model_calls is not None
+        and plan.total_model_calls > args.max_model_calls
+    ):
+        print(
+            f"planned model calls {plan.total_model_calls} exceed "
+            f"--max-model-calls {args.max_model_calls}",
+            file=sys.stderr,
+        )
+        return 2
 
     worker = None
     judge = None
-    if args.llm_provider != "anthropic":
+    if args.llm_provider in API_PROVIDERS:
+        worker, judge = build_api_models(
+            provider=args.llm_provider,
+            worker_model=args.worker_model,
+            judge_model=args.judge_model,
+            timeout_seconds=args.api_timeout,
+        )
+    elif args.llm_provider in CLI_PROVIDERS:
         worker, judge = build_cli_models(
             provider=args.llm_provider,
             worker_model=args.worker_model,

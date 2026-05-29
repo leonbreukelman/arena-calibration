@@ -31,6 +31,10 @@ from typing import Callable, Protocol
 # downstream caller share the same identifiers.
 WORKER_MODEL = "claude-haiku-4-5"
 JUDGE_MODEL = "claude-opus-4-7"
+WORKER_MAX_TOKENS = 1024
+JUDGE_MAX_TOKENS = 512
+WORKER_TEMPERATURE = 0.0
+JUDGE_TEMPERATURE = 0.0
 
 
 class Worker(Protocol):
@@ -94,12 +98,35 @@ of which reasoning components were load-bearing, produce a one-sentence
 human-readable note. Be terse. No hedging. No restatement."""
 
 
+def build_regen_prompt(
+    *,
+    target_path: str,
+    file_contents: str,
+    reasoning: str,
+) -> str:
+    """Build the Worker user prompt shared by all live adapters."""
+    return _REGEN_USER_TEMPLATE.format(
+        target_path=target_path,
+        file_contents=file_contents,
+        reasoning=reasoning,
+    )
+
+
+def build_judge_prompt(fixture_id: str, per_component_summary: str) -> str:
+    """Build the Judge user prompt shared by all live adapters."""
+    return (
+        f"Fixture: {fixture_id}\n\n"
+        f"Per-component verdicts:\n{per_component_summary}\n\n"
+        f"Summarize in one sentence."
+    )
+
+
 @dataclass
 class AnthropicWorker:
     """Real Worker backed by the Anthropic API."""
     model: str = WORKER_MODEL
-    max_tokens: int = 1024
-    temperature: float = 0.0
+    max_tokens: int = WORKER_MAX_TOKENS
+    temperature: float = WORKER_TEMPERATURE
 
     def regenerate_patch(
         self,
@@ -111,7 +138,7 @@ class AnthropicWorker:
         from anthropic import Anthropic
 
         client = Anthropic()
-        prompt = _REGEN_USER_TEMPLATE.format(
+        prompt = build_regen_prompt(
             target_path=target_path,
             file_contents=file_contents,
             reasoning=reasoning,
@@ -133,18 +160,14 @@ class AnthropicWorker:
 class AnthropicJudge:
     """Real Judge backed by the Anthropic API."""
     model: str = JUDGE_MODEL
-    max_tokens: int = 512
-    temperature: float = 0.0
+    max_tokens: int = JUDGE_MAX_TOKENS
+    temperature: float = JUDGE_TEMPERATURE
 
     def summarize(self, fixture_id: str, per_component_summary: str) -> str:
         from anthropic import Anthropic
 
         client = Anthropic()
-        prompt = (
-            f"Fixture: {fixture_id}\n\n"
-            f"Per-component verdicts:\n{per_component_summary}\n\n"
-            f"Summarize in one sentence."
-        )
+        prompt = build_judge_prompt(fixture_id, per_component_summary)
         msg = client.messages.create(
             model=self.model,
             max_tokens=self.max_tokens,

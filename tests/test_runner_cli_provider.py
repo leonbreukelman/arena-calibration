@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 
 def test_runner_default_provider_does_not_construct_cli_models(monkeypatch, tmp_path):
@@ -20,8 +21,19 @@ def test_runner_default_provider_does_not_construct_cli_models(monkeypatch, tmp_
 
     monkeypatch.setattr(runner, "run", fake_run)
     monkeypatch.setattr(runner, "build_cli_models", fail_build_cli_models)
+    monkeypatch.setattr(
+        runner,
+        "plan_model_calls",
+        lambda *args, **kwargs: SimpleNamespace(total_model_calls=0),
+    )
 
-    code = runner.main(["--fixtures-dir", "fixtures", "--results-dir", str(tmp_path)])
+    code = runner.main([
+        "--fixtures-dir",
+        "fixtures",
+        "--results-dir",
+        str(tmp_path),
+        "--confirm-live",
+    ])
 
     assert code == 0
     assert captured["fixtures_dir"] == Path("fixtures")
@@ -48,6 +60,11 @@ def test_runner_claude_code_provider_constructs_cli_models(monkeypatch, tmp_path
 
     monkeypatch.setattr(runner, "build_cli_models", fake_build_cli_models)
     monkeypatch.setattr(runner, "run", fake_run)
+    monkeypatch.setattr(
+        runner,
+        "plan_model_calls",
+        lambda *args, **kwargs: SimpleNamespace(total_model_calls=0),
+    )
 
     code = runner.main([
         "--fixtures-dir",
@@ -64,6 +81,7 @@ def test_runner_claude_code_provider_constructs_cli_models(monkeypatch, tmp_path
         "max",
         "--cli-timeout",
         "321",
+        "--confirm-live",
     ])
 
     assert code == 0
@@ -93,6 +111,11 @@ def test_runner_anthropic_ignores_cli_model_flags_and_preserves_default_api_path
 
     monkeypatch.setattr(runner, "run", fake_run)
     monkeypatch.setattr(runner, "build_cli_models", fail_build_cli_models)
+    monkeypatch.setattr(
+        runner,
+        "plan_model_calls",
+        lambda *args, **kwargs: SimpleNamespace(total_model_calls=0),
+    )
 
     code = runner.main([
         "--fixtures-dir",
@@ -107,6 +130,7 @@ def test_runner_anthropic_ignores_cli_model_flags_and_preserves_default_api_path
         "ignored-judge",
         "--cli-effort",
         "ignored-effort",
+        "--confirm-live",
     ])
 
     assert code == 0

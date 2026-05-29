@@ -36,26 +36,81 @@ where ground truth is known by construction?
 
 ## Operating the Verifier
 
-The Verifier requires an `ANTHROPIC_API_KEY` set in the environment to
-exercise live workers and judges. To run hermetically (no network, no
-API key needed), see `exercise_verifier.py` which drives the Verifier
-through F1, F2, F3 with deterministic scripted workers.
+The hermetic exercise requires no network and no API key. It drives the
+Verifier through F1, F2, F3 with deterministic scripted workers.
 
 ```
-ANTHROPIC_API_KEY=...  python -m arena.runner           # live API exercise
-python exercise_verifier.py                              # hermetic exercise
+python exercise_verifier.py
 ```
+
+Live runs consume paid API capacity or subscription quota. The runner fails
+closed unless `--confirm-live` is supplied. Inspect call count and budget
+exposure first:
+
+```
+python -m arena.runner --llm-provider xai --dry-run
+```
+
+### API-backed live providers
+
+Recommended budget-sensitive path is xAI first. The observed xAI Models API
+exposed `grok-4.3`; this runner defaults xAI worker and judge calls to that
+model unless `--worker-model` / `--judge-model` override it.
+
+```
+export XAI_API_KEY=...
+python -m arena.runner --llm-provider xai --dry-run
+```
+
+Authorized one-call xAI smoke (this spends one worker call; the runner has no
+single-call mode, and `--max-model-calls` is an abort ceiling, not a cap):
+
+```
+python - <<'PY'
+from pathlib import Path
+from arena.api_llm import XAIWorker
+from arena.fixtures import load_all_fixtures
+from arena.lanham import unperturbed
+from arena.verifier import _read_baseline_file
+
+fixture = next(f for f in load_all_fixtures(Path("fixtures")) if f.id == "F1_loadbearing_good")
+target_path, source = _read_baseline_file(fixture)
+diff = XAIWorker().regenerate_patch(source, unperturbed(list(fixture.reasoning_components)), target_path)
+print(diff)
+PY
+```
+
+Full xAI live run after the smoke is green:
+
+```
+python -m arena.runner --llm-provider xai --confirm-live --max-model-calls 168
+```
+
+Additional OpenAI-compatible providers are available:
+
+```
+python -m arena.runner --llm-provider gemini --dry-run
+python -m arena.runner --llm-provider openrouter --dry-run
+```
+
+Provider notes:
+- `xai` uses `https://api.x.ai/v1/chat/completions`; default model `grok-4.3`.
+- `gemini` uses the Gemini OpenAI-compatible endpoint; default model
+  `gemini-2.5-flash-lite`.
+- `openrouter` uses `https://openrouter.ai/api/v1/chat/completions`; default
+  model `x-ai/grok-4.3`.
+- `anthropic` remains available via the existing Anthropic SDK path, but is not
+  recommended for budget-sensitive testing.
 
 ### CLI-backed live providers
 
-The API-backed Anthropic path remains the default. The runner can also inject
-local CLI wrappers that satisfy the same Worker/Judge interface:
+The runner can also inject local CLI wrappers that satisfy the same Worker/Judge
+interface:
 
 ```
-python -m arena.runner --llm-provider anthropic
-python -m arena.runner --llm-provider claude-code --worker-model haiku --judge-model opus
-python -m arena.runner --llm-provider codex
-python -m arena.runner --llm-provider copilot
+python -m arena.runner --llm-provider claude-code --worker-model haiku --judge-model opus --dry-run
+python -m arena.runner --llm-provider codex --dry-run
+python -m arena.runner --llm-provider copilot --dry-run
 ```
 
 Provider notes:
@@ -69,18 +124,20 @@ Provider notes:
   instructions and built-in MCPs disabled, no remote control, no ask-user tool,
   and no available tools.
 
-Model overrides:
-- `--worker-model` and `--judge-model` affect CLI providers only; they are
-  ignored by the default `anthropic` provider.
-- `--cli-effort` overrides effort for both worker and judge where the provider
-  supports effort.
+Model overrides and guards:
+- `--worker-model` and `--judge-model` affect API and CLI providers.
+- `--api-timeout` sets a per-call HTTP timeout for API providers.
+- `--cli-effort` overrides effort for both worker and judge where the CLI
+  provider supports effort.
 - `--cli-timeout` sets a per-call subprocess timeout in seconds.
+- `--max-model-calls` aborts before live execution if the planned call count is
+  above the supplied ceiling.
 
-These CLI wrappers are still live model calls and may consume subscription
-quota or paid API capacity. Treat them as experimental until a provider-specific
-one-call smoke has been explicitly authorized and mechanically verified. The
-current four-fixture live run invokes the worker 165 times and the judge 3
-times; F4 is scorer-rejected, so its verifier/judge path is not invoked.
+All live providers consume subscription quota or paid API capacity. Treat every
+provider as experimental until a provider-specific one-call smoke has been
+explicitly authorized and mechanically verified. The current four-fixture live
+run invokes the worker 165 times and the judge 3 times; F4 is scorer-rejected,
+so its verifier/judge path is not invoked.
 
 The hermetic exercise verifies the Verifier *harness* (perturbation
 composition, AST-equivalence, majority vote, threshold sweep, per-
