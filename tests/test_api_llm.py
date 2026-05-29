@@ -28,8 +28,8 @@ class _Response:
         return json.dumps(self.payload).encode("utf-8")
 
 
-def _chat_response(content):
-    return {"choices": [{"message": {"content": content}}]}
+def _chat_response(content, model="grok-4.3"):
+    return {"model": model, "choices": [{"message": {"content": content}}]}
 
 
 def test_xai_worker_sends_openai_chat_payload_with_prompt_parity_and_timeout(monkeypatch):
@@ -115,6 +115,7 @@ def test_openai_content_parts_are_joined_and_reasoning_fields_are_ignored(monkey
     def fake_urlopen(request, *, timeout):
         return _Response(
             {
+                "model": "grok-4.3",
                 "choices": [
                     {
                         "message": {
@@ -134,6 +135,66 @@ def test_openai_content_parts_are_joined_and_reasoning_fields_are_ignored(monkey
     worker = api_llm.XAIWorker(api_key=_fake_key("xai-", "test-", "key"))
 
     assert worker.regenerate_patch("SOURCE", "REASON", "tokenizer.py") == "part 1 part 2"
+
+
+def test_served_model_mismatch_raises_without_prompt_or_key_leakage(monkeypatch):
+    import arena.api_llm as api_llm
+
+    xai_key = _fake_key("xai-", "secret-", "key")
+
+    def fake_urlopen(request, *, timeout):
+        return _Response(
+            _chat_response(
+                VALID_DIFF,
+                model=f"wrong-model SECRET_SOURCE SECRET_REASON {xai_key}",
+            )
+        )
+
+    monkeypatch.setattr(api_llm.urllib.request, "urlopen", fake_urlopen)
+
+    worker = api_llm.XAIWorker(api_key=xai_key)
+    with pytest.raises(api_llm.ApiModelError) as exc:
+        worker.regenerate_patch("SECRET_SOURCE", "SECRET_REASON", "tokenizer.py")
+
+    msg = str(exc.value)
+    assert "xai" in msg
+    assert "served model mismatch" in msg
+    assert "grok-4.3" in msg
+    assert "wrong-model" in msg
+    assert "SECRET_SOURCE" not in msg
+    assert "SECRET_REASON" not in msg
+    assert xai_key not in msg
+
+
+def test_missing_served_model_raises_because_model_cannot_be_verified(monkeypatch):
+    import arena.api_llm as api_llm
+
+    def fake_urlopen(request, *, timeout):
+        return _Response({"choices": [{"message": {"content": VALID_DIFF}}]})
+
+    monkeypatch.setattr(api_llm.urllib.request, "urlopen", fake_urlopen)
+
+    worker = api_llm.XAIWorker(api_key=_fake_key("xai-", "test-", "key"))
+    with pytest.raises(api_llm.ApiModelError) as exc:
+        worker.regenerate_patch("SOURCE", "REASON", "tokenizer.py")
+
+    assert "served model missing" in str(exc.value)
+
+
+def test_explicit_served_model_alias_accepts_versioned_response(monkeypatch):
+    import arena.api_llm as api_llm
+
+    def fake_urlopen(request, *, timeout):
+        return _Response(_chat_response(VALID_DIFF, model="grok-4.3-20260529"))
+
+    monkeypatch.setattr(api_llm.urllib.request, "urlopen", fake_urlopen)
+
+    worker = api_llm.XAIWorker(
+        api_key=_fake_key("xai-", "test-", "key"),
+        accepted_served_models=("grok-4.3-20260529",),
+    )
+
+    assert worker.regenerate_patch("SOURCE", "REASON", "tokenizer.py") == VALID_DIFF
 
 
 def test_build_api_models_maps_defaults_overrides_and_rejects_unknown_provider():
@@ -242,7 +303,9 @@ def test_malformed_response_raises_typed_error_without_prompt_leakage(monkeypatc
     import arena.api_llm as api_llm
 
     def fake_urlopen(request, *, timeout):
-        return _Response({"choices": [{"message": {"reasoning_content": "not visible"}}]})
+        return _Response(
+            {"model": "grok-4.3", "choices": [{"message": {"reasoning_content": "not visible"}}]}
+        )
 
     monkeypatch.setattr(api_llm.urllib.request, "urlopen", fake_urlopen)
 
@@ -260,7 +323,7 @@ def test_empty_visible_content_raises_typed_error(monkeypatch):
     import arena.api_llm as api_llm
 
     def fake_urlopen(request, *, timeout):
-        return _Response({"choices": [{"message": {"content": ""}}]})
+        return _Response({"model": "grok-4.3", "choices": [{"message": {"content": ""}}]})
 
     monkeypatch.setattr(api_llm.urllib.request, "urlopen", fake_urlopen)
 
@@ -276,7 +339,10 @@ def test_finish_reason_length_raises_before_using_truncated_content(monkeypatch)
 
     def fake_urlopen(request, *, timeout):
         return _Response(
-            {"choices": [{"finish_reason": "length", "message": {"content": VALID_DIFF}}]}
+            {
+                "model": "grok-4.3",
+                "choices": [{"finish_reason": "length", "message": {"content": VALID_DIFF}}],
+            }
         )
 
     monkeypatch.setattr(api_llm.urllib.request, "urlopen", fake_urlopen)
@@ -292,7 +358,7 @@ def test_non_dict_message_raises_typed_malformed_response(monkeypatch):
     import arena.api_llm as api_llm
 
     def fake_urlopen(request, *, timeout):
-        return _Response({"choices": [{"message": "not-a-dict"}]})
+        return _Response({"model": "grok-4.3", "choices": [{"message": "not-a-dict"}]})
 
     monkeypatch.setattr(api_llm.urllib.request, "urlopen", fake_urlopen)
 
@@ -311,7 +377,7 @@ def test_gemini_accepts_google_api_key_fallback(monkeypatch):
 
     def fake_urlopen(request, *, timeout):
         captured["authorization"] = dict(request.header_items())["Authorization"]
-        return _Response(_chat_response(VALID_DIFF))
+        return _Response(_chat_response(VALID_DIFF, model="gemini-2.5-flash-lite"))
 
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setenv("GOOGLE_API_KEY", google_key)

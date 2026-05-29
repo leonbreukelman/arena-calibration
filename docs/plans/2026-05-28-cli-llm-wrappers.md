@@ -13,7 +13,7 @@
 ## Opus review status
 
 Review artifact:
-- `/home/leonb/projects/build-arena/docs/verification/2026-05-28-opus-plan-review.stdout.json`
+- `docs/verification/2026-05-28-opus-plan-review.stdout.json` (stored in this repo; older metadata may retain the absolute path from the original review run)
 
 Reviewer command:
 - Claude Code Opus alias, `--effort max`, `--tools ""`, `--output-format json`, read-only.

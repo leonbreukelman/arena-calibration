@@ -4,6 +4,11 @@ Calibration harness for the build-arena Verifier and Scorer. Holds a frozen
 set of hand-crafted fixtures with labeled ground truth, exercises the Scorer
 and Verifier against them, reports a discrimination matrix.
 
+Repo identity: `arena-calibration` is the calibration-harness repo. The
+separate `build-calibration` repo is the main autonomous build-arena loop.
+References to `build-arena` in this README describe the system being
+calibrated, not the local checkout name for this harness.
+
 ## Axiom
 
 Every claim the agent makes must be verifiable by something that is not the
@@ -126,6 +131,9 @@ Provider notes:
 
 Model overrides and guards:
 - `--worker-model` and `--judge-model` affect API and CLI providers.
+- API providers fail closed if the response omits `model` or reports a served
+  model that was not explicitly requested/accepted; there are no prefix or
+  provider-alias heuristics.
 - `--api-timeout` sets a per-call HTTP timeout for API providers.
 - `--cli-effort` overrides effort for both worker and judge where the CLI
   provider supports effort.

@@ -105,6 +105,34 @@ def _sanitize(text: str, sensitive: Iterable[str]) -> str:
     return sanitized[:500]
 
 
+def _verify_served_model(
+    payload: dict[str, Any],
+    *,
+    provider: str,
+    requested_model: str,
+    accepted_served_models: tuple[str, ...],
+    sensitive: Iterable[str],
+) -> None:
+    """Require the API response to name an explicitly accepted served model.
+
+    Exact requested-model equality is the default anti-redirect policy. Providers
+    that legitimately return normalized/versioned IDs must be opted in with an
+    explicit accepted_served_models entry; there are no prefix heuristics.
+    """
+    served_model = payload.get("model")
+    if not isinstance(served_model, str) or not served_model.strip():
+        raise ApiModelError(f"{provider}: served model missing from response")
+
+    accepted = {requested_model, *accepted_served_models}
+    if served_model not in accepted:
+        safe_requested = _sanitize(requested_model, sensitive)
+        safe_served = _sanitize(served_model, sensitive)
+        raise ApiModelError(
+            f"{provider}: served model mismatch; "
+            f"requested {safe_requested!r}; served {safe_served!r}"
+        )
+
+
 def _parse_visible_message_content(payload: dict[str, Any], provider: str) -> str:
     try:
         choices = payload["choices"]
@@ -161,6 +189,7 @@ class OpenAICompatibleClient:
         messages: list[dict[str, str]],
         max_tokens: int,
         temperature: float,
+        accepted_served_models: tuple[str, ...] = (),
     ) -> str:
         key = _resolve_api_key(self.provider, self.key_env_names, self.api_key)
         body = {
@@ -199,6 +228,13 @@ class OpenAICompatibleClient:
             raise ApiModelError(
                 f"{self.provider}: malformed JSON chat-completions response"
             ) from exc
+        _verify_served_model(
+            payload,
+            provider=self.provider,
+            requested_model=model,
+            accepted_served_models=accepted_served_models,
+            sensitive=sensitive,
+        )
         return _parse_visible_message_content(payload, self.provider)
 
 
@@ -212,6 +248,7 @@ class OpenAICompatibleWorker:
     max_tokens: int = WORKER_MAX_TOKENS
     temperature: float = WORKER_TEMPERATURE
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
+    accepted_served_models: tuple[str, ...] = ()
 
     def regenerate_patch(
         self,
@@ -234,6 +271,7 @@ class OpenAICompatibleWorker:
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
+            accepted_served_models=self.accepted_served_models,
             messages=[
                 {"role": "system", "content": _REGEN_SYSTEM},
                 {"role": "user", "content": prompt},
@@ -251,6 +289,7 @@ class OpenAICompatibleJudge:
     max_tokens: int = JUDGE_MAX_TOKENS
     temperature: float = JUDGE_TEMPERATURE
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
+    accepted_served_models: tuple[str, ...] = ()
 
     def summarize(self, fixture_id: str, per_component_summary: str) -> str:
         prompt = build_judge_prompt(fixture_id, per_component_summary)
@@ -264,6 +303,7 @@ class OpenAICompatibleJudge:
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
+            accepted_served_models=self.accepted_served_models,
             messages=[
                 {"role": "system", "content": _JUDGE_SYSTEM},
                 {"role": "user", "content": prompt},
@@ -279,6 +319,7 @@ class XAIWorker(OpenAICompatibleWorker):
         max_tokens: int = WORKER_MAX_TOKENS,
         temperature: float = WORKER_TEMPERATURE,
         timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+        accepted_served_models: tuple[str, ...] = (),
     ) -> None:
         config = PROVIDER_CONFIGS["xai"]
         super().__init__(
@@ -290,6 +331,7 @@ class XAIWorker(OpenAICompatibleWorker):
             max_tokens=max_tokens,
             temperature=temperature,
             timeout_seconds=timeout_seconds,
+            accepted_served_models=accepted_served_models,
         )
 
 
@@ -301,6 +343,7 @@ class XAIJudge(OpenAICompatibleJudge):
         max_tokens: int = JUDGE_MAX_TOKENS,
         temperature: float = JUDGE_TEMPERATURE,
         timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+        accepted_served_models: tuple[str, ...] = (),
     ) -> None:
         config = PROVIDER_CONFIGS["xai"]
         super().__init__(
@@ -312,6 +355,7 @@ class XAIJudge(OpenAICompatibleJudge):
             max_tokens=max_tokens,
             temperature=temperature,
             timeout_seconds=timeout_seconds,
+            accepted_served_models=accepted_served_models,
         )
 
 
