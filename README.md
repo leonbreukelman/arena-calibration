@@ -5,7 +5,7 @@ set of hand-crafted fixtures with labeled ground truth, exercises the Scorer
 and Verifier against them, reports a discrimination matrix.
 
 Repo identity: `arena-calibration` is the calibration-harness repo. The
-separate `build-calibration` repo is the main autonomous build-arena loop.
+separate `build-arena` repo is the main autonomous build/improvement loop.
 References to `build-arena` in this README describe the system being
 calibrated, not the local checkout name for this harness.
 
