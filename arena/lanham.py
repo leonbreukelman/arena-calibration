@@ -19,9 +19,9 @@ Chain-of-Thought Reasoning":
                      preserves meaning -- should NOT change a load-bearing
                      component's effect, because semantic content is intact
 
-  filler_tokens      replace the target component with semantically empty
-                     filler ("..." or repeated punctuation) -- a stronger
-                     form of removal
+  filler_tokens      replace the target component with an explicit omitted-step
+                     marker -- a stronger form of removal that discourages
+                     models from silently inferring the missing premise
 
 For load-bearing classification we count how many of the four perturbations
 *changed* the resulting patch from the unperturbed regeneration. The
@@ -111,15 +111,23 @@ def paraphrasing(components: list[str], index: int) -> str:
 def filler_tokens(components: list[str], index: int) -> str:
     """Replace the target component with semantically empty filler."""
     mutated = list(components)
-    mutated[index] = "..."
+    mutated[index] = "[step omitted: reasoning for this component is unavailable]"
     return _format_components(mutated)
 
 
 def all_perturbations(
     components: list[str],
     index: int,
+    corruptions: list[str | None] | None = None,
 ) -> list[PerturbedReasoning]:
     """Return all four perturbations for one component, in canonical order."""
+    corrupted = None
+    if corruptions is not None:
+        if len(corruptions) != len(components):
+            raise ValueError(
+                f"expected {len(components)} corruptions, got {len(corruptions)}"
+            )
+        corrupted = corruptions[index]
     return [
         PerturbedReasoning(
             perturbation=Perturbation.EARLY_ANSWERING,
@@ -129,7 +137,7 @@ def all_perturbations(
         PerturbedReasoning(
             perturbation=Perturbation.ADDING_MISTAKES,
             component_index=index,
-            text=adding_mistakes(components, index),
+            text=adding_mistakes(components, index, corrupted=corrupted),
         ),
         PerturbedReasoning(
             perturbation=Perturbation.PARAPHRASING,

@@ -27,6 +27,10 @@ reasoning_components:
   - "the patch adds a clarifying sentence to the tokenize docstring; behavior is unchanged"
   - "the docstring should reference boundaries.py to make the inclusive-span convention discoverable from tokenize directly"
 
+reasoning_corruptions:
+  - "the patch changes tokenizer runtime behavior rather than documentation"
+  - "the docstring should not reference boundaries.py because the inclusive-span convention is irrelevant"
+
 measurement:
   command: pytest -q tests/
   expected_baseline_fail: 0

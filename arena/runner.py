@@ -141,6 +141,7 @@ def plan_model_calls(
             continue
         promoted.append(fixture.id)
         components = list(fixture.reasoning_components)
+        corruptions = list(fixture.reasoning_corruptions)
         target_path, baseline_source = _read_baseline_file(fixture)
 
         reference_prompt = build_regen_prompt(
@@ -152,7 +153,7 @@ def plan_model_calls(
         worker_input_chars += N_SAMPLES * (len(_REGEN_SYSTEM) + len(reference_prompt))
 
         for i in range(len(components)):
-            for perturbed in all_perturbations(components, i):
+            for perturbed in all_perturbations(components, i, corruptions=corruptions):
                 prompt = build_regen_prompt(
                     target_path=target_path,
                     file_contents=baseline_source,
@@ -236,11 +237,14 @@ def _evaluate(
                 "load_bearing": c.load_bearing,
                 "perturbations_changed_patch": c.perturbations_changed_patch,
                 "perturbations_total": c.perturbations_total,
+                "perturbations_indeterminate": c.perturbations_indeterminate,
                 "perturbation_outcomes": [
                     {
                         "perturbation": p.perturbation,
                         "changed_patch": p.changed_patch,
                         "sample_diffs_changed": p.sample_diffs_changed,
+                        "sample_diffs_indeterminate": p.sample_diffs_indeterminate,
+                        "majority_comparison": p.majority_comparison,
                     }
                     for p in c.perturbation_outcomes
                 ],
