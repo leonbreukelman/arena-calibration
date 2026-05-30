@@ -31,6 +31,12 @@ reasoning_components:
   - "empty spans can arise from upstream parser quirks involving combining diacriticals and zero-width joiners"
   - "filtering ensures downstream consumers receive only non-empty tokens"
 
+reasoning_corruptions:
+  - "inputs are ASCII-only, so multi-byte UTF-8 boundary handling cannot affect token spans"
+  - "Python string indexing operates on bytes rather than code points, so byte offsets should be preserved directly"
+  - "empty spans should always be normalized away before tokenization, independent of inverted span handling"
+  - "filtering ensures downstream consumers receive only empty tokens"
+
 measurement:
   command: pytest -q tests/
   expected_baseline_fail: 1

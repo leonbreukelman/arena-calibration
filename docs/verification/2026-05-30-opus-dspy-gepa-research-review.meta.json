@@ -1,0 +1,9 @@
+{
+  "reviewer": "Claude Code Opus alias",
+  "command_shape": "claude -p --model opus --effort max --max-budget-usd 3 --output-format json --permission-mode plan",
+  "prompt_path": "/tmp/arena_dspy_gepa_opus_research_review_prompt.md",
+  "stdout_json": "docs/verification/2026-05-30-opus-dspy-gepa-research-review.stdout.json",
+  "markdown_review": "docs/verification/2026-05-30-opus-dspy-gepa-research-review.md",
+  "reported_cost_usd": 2.5128361,
+  "verdict": "Conditional GO on plumbing/product prompt optimization; NO-GO on GEPA-for-calibration now"
+}
