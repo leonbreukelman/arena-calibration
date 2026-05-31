@@ -25,5 +25,5 @@ dist/
 # Harness run outputs
 results/
 
-# Accidental empty shell-expansion artifact from local setup
-{arena,fixtures/
+# Local research/source PDFs; commit intentionally with `git add -f` if needed.
+docs/*.pdf
