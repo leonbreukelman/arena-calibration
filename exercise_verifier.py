@@ -25,10 +25,32 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from arena.fixtures import VerifierVerdict, load_fixture
+from arena.fixtures import VerifierVerdict, load_all_fixtures, load_fixture
 from arena.lanham import Perturbation
 from arena.llm import FakeJudge, FakeWorker
 from arena.verifier import verify
+
+
+def _load_known_corruptions() -> set[str]:
+    """Known fixture-specific mistake perturbations for script-only detection.
+
+    The production verifier carries the perturbation kind structurally. This
+    script infers it back from the reasoning text to drive deterministic fake
+    workers, so it needs to recognize the machine-readable corruptions added to
+    manifests as well as the historical lexical-inversion marker.
+    """
+    try:
+        return {
+            corruption
+            for fixture in load_all_fixtures(Path("fixtures"))
+            for corruption in fixture.reasoning_corruptions
+            if corruption
+        }
+    except Exception:
+        return set()
+
+
+KNOWN_CORRUPTIONS = _load_known_corruptions()
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +101,7 @@ F2_CORRECT_DIFF = """--- a/tokenizer.py
 
 F2_WRONG_DIFF = """--- a/tokenizer.py
 +++ b/tokenizer.py
-@@ -15,6 +15,7 @@
+@@ -15,6 +15,6 @@
      for start, end in spans:
          token_len = end - start + 1
          if token_len <= 0:
@@ -158,13 +180,14 @@ def _detect_perturbation(reasoning: str) -> tuple[Perturbation | None, int | Non
 
     # The other three perturbations modify one numbered line.
     for idx_in_list, (_line_no, line) in enumerate(numbered_lines):
-        if "It is NOT the case that" in line:
+        stripped = line.split(". ", 1)[1] if ". " in line else line
+        if "It is NOT the case that" in line or stripped.strip() in KNOWN_CORRUPTIONS:
             return Perturbation.ADDING_MISTAKES, idx_in_list
         if "In other words," in line:
             return Perturbation.PARAPHRASING, idx_in_list
-        # Filler is detected as a numbered line that is just "N. ..."
-        stripped = line.split(". ", 1)[1] if ". " in line else line
-        if stripped.strip() == "...":
+        # Filler is detected as a numbered omitted-step marker. Keep the
+        # legacy "..." check so old fixture snapshots remain interpretable.
+        if stripped.strip() == "..." or stripped.strip().startswith("[step omitted:"):
             return Perturbation.FILLER_TOKENS, idx_in_list
 
     return None, None

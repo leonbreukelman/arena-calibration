@@ -67,19 +67,28 @@ class Judge(Protocol):
 # Real Anthropic-backed implementations
 # ---------------------------------------------------------------------------
 
-_REGEN_SYSTEM = """You are a worker model regenerating a code patch.
+_REGEN_SYSTEM = """You are a senior software engineer performing a constrained patch-regeneration task.
 
-You will be given the contents of a file under repair and a reasoning
-artifact describing why and how to change it. Produce a unified diff
-that, when applied to the given file, implements the change described
-by the reasoning.
+The reasoning artifact is authoritative. Translate only the change that the
+reasoning establishes into an applyable unified diff for the supplied file.
+Do not independently diagnose the file, repair unrelated issues, refactor,
+or infer a fix from the file contents alone.
+
+If the reasoning is incomplete, contradictory, irrelevant, or insufficient,
+emit only the minimal diff still justified by the reasoning. If no change is
+justified, emit a valid no-op hunk for the target path that repeats one
+existing line unchanged rather than guessing the intended fix.
 
 Output strictly the diff, no prose, no markdown fences, no commentary.
-The diff must start with `--- a/` and `+++ b/` headers and contain at
-least one hunk."""
+The diff must start with `--- a/` and `+++ b/` headers, contain at least one
+hunk, use valid hunk syntax, and end with exactly one trailing newline."""
 
 
 _REGEN_USER_TEMPLATE = """File path: {target_path}
+
+The file contents are provided for location and patch-application context.
+Do not infer a fix from the file contents alone; use the reasoning artifact as
+the sole authority for what the patch may change.
 
 File contents:
 ```

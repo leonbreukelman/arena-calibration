@@ -1,4 +1,4 @@
-"""AST-normalized patch equivalence.
+"""AST-normalized patch equivalence and LLM diff ingestion.
 
 Two patches are equivalent iff, when applied to the same baseline file,
 the resulting file contents parse to ASTs that compare equal after
@@ -13,25 +13,63 @@ Normalization strips:
 Identifier renames are NOT normalized away: changing a name is semantically
 significant for the kind of patches this calibration set exercises.
 
-Equivalence falls back to:
-  - byte-exact equality if either side fails to parse (e.g., the worker
-    emitted nonsense)
-  - "not equivalent" if applying the patch fails for one side and succeeds
-    for the other
-  - "not equivalent" if both fail to apply (we cannot establish equivalence
-    from two failures)
-
-This module does not call out to git or external patch binaries; it uses
-the `patch` command from the standard `unidiff` library if available,
-falling back to its own minimal applier for the simple cases this
-calibration set produces.
+Patch ingestion deliberately separates semantic comparison from output-format
+failures. LLMs often wrap diffs in markdown fences or omit the final newline;
+those are normalized before application. If either side still cannot be
+applied, comparison is indeterminate rather than "different" so diff-format
+failures do not masquerade as load-bearing reasoning changes.
 """
 from __future__ import annotations
 
 import ast
+import re
 import subprocess
 import tempfile
-from pathlib import Path
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path, PurePosixPath
+
+
+class PatchComparisonStatus(str, Enum):
+    """Outcome taxonomy for comparing two generated patches."""
+
+    EQUIVALENT = "equivalent"
+    SEMANTIC_MISMATCH = "semantic_mismatch"
+    UNPARSEABLE_OUTPUT_MISMATCH = "unparseable_output_mismatch"
+    INDETERMINATE_BOTH_FAILED = "indeterminate_both_failed"
+    INDETERMINATE_APPLY_FAILED = "indeterminate_apply_failed"
+
+
+@dataclass(frozen=True)
+class PatchComparison:
+    equivalent: bool | None
+    status: PatchComparisonStatus
+    applied_a: bool
+    applied_b: bool
+
+
+_FENCED_BLOCK = re.compile(
+    r"```(?:diff|patch)?[ \t]*\n(?P<body>.*?)(?:\n```|\Z)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def normalize_patch_diff(patch_diff: str) -> str:
+    """Normalize common LLM diff-format noise before applying a patch.
+
+    The raw response remains auditable by callers; this function only prepares
+    text for mechanical application. It strips a single markdown diff/patch
+    fence when present, removes leading/trailing blank space around the diff,
+    normalizes CRLF to LF, and ensures exactly one trailing newline.
+    """
+    text = patch_diff.replace("\r\n", "\n").replace("\r", "\n")
+    stripped = text.strip()
+    match = _FENCED_BLOCK.search(stripped)
+    if match:
+        stripped = match.group("body").strip()
+    if not stripped:
+        return ""
+    return stripped.rstrip("\n") + "\n"
 
 
 def _strip_docstrings(tree: ast.AST) -> ast.AST:
@@ -73,27 +111,28 @@ def _normalize(source: str) -> str | None:
 
 
 def apply_patch(baseline_source: str, patch_diff: str) -> str | None:
-    """Apply a unified diff to baseline_source. Returns the patched source
-    on success, None on any failure (malformed diff, hunk mismatch, etc).
+    """Apply a unified diff to baseline_source.
 
-    Uses the system `patch` utility in a temp directory. This avoids
-    reimplementing diff application -- the system patch tool is more
-    permissive than strict diff libraries about whitespace and fuzz.
+    Returns the patched source on success, None on any failure (malformed diff,
+    hunk mismatch, etc). Common LLM formatting noise is normalized before the
+    system `patch` utility runs.
     """
-    if not patch_diff.strip():
+    normalized_diff = normalize_patch_diff(patch_diff)
+    if not normalized_diff.strip():
         return None
     with tempfile.TemporaryDirectory() as td:
         td_path = Path(td)
         # The diff uses `a/<name>` and `b/<name>` conventions; the actual
         # file we write is just at <name>.
         # Extract target filename from the diff header.
-        target_name = _extract_target_name(patch_diff)
+        target_name = _extract_target_name(normalized_diff)
         if target_name is None:
             return None
         file_path = td_path / target_name
+        file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_text(baseline_source)
         diff_path = td_path / "patch.diff"
-        diff_path.write_text(patch_diff)
+        diff_path.write_text(normalized_diff)
         result = subprocess.run(
             ["patch", "-p1", "-i", str(diff_path), "--silent", "--no-backup-if-mismatch"],
             cwd=str(td_path),
@@ -109,14 +148,84 @@ def apply_patch(baseline_source: str, patch_diff: str) -> str | None:
 
 
 def _extract_target_name(patch_diff: str) -> str | None:
-    """Pull the target filename out of `+++ b/<name>` or `+++ <name>`."""
+    """Pull the target filename out of `+++ b/<name>` or `+++ <name>`.
+
+    Reject absolute paths and parent-directory traversal before writing the
+    temporary baseline file. Model-generated diffs should only target the file
+    under repair, never paths outside the apply sandbox.
+    """
     for line in patch_diff.splitlines():
         if line.startswith("+++ "):
             rest = line[4:].split("\t", 1)[0].strip()
             if rest.startswith("b/"):
                 rest = rest[2:]
+            path = PurePosixPath(rest)
+            if (
+                path.is_absolute()
+                or ".." in path.parts
+                or "\\" in rest
+                or re.match(r"^[A-Za-z]:", rest)
+                or rest in {"", "/dev/null"}
+            ):
+                return None
             return rest
     return None
+
+
+def compare_patches(
+    baseline_source: str,
+    patch_a: str,
+    patch_b: str,
+) -> PatchComparison:
+    """Compare two diffs after applying them to the same baseline.
+
+    `equivalent` is:
+      - True when both patches apply and normalize to the same AST/source
+      - False when both patches apply and produce different semantics, or when
+        unparseable patched outputs differ byte-for-byte
+      - None when either patch cannot be applied, so the comparison is not a
+        trustworthy reasoning-dependency signal
+    """
+    applied_a = apply_patch(baseline_source, patch_a)
+    applied_b = apply_patch(baseline_source, patch_b)
+
+    if applied_a is None and applied_b is None:
+        return PatchComparison(
+            equivalent=None,
+            status=PatchComparisonStatus.INDETERMINATE_BOTH_FAILED,
+            applied_a=False,
+            applied_b=False,
+        )
+    if applied_a is None or applied_b is None:
+        return PatchComparison(
+            equivalent=None,
+            status=PatchComparisonStatus.INDETERMINATE_APPLY_FAILED,
+            applied_a=applied_a is not None,
+            applied_b=applied_b is not None,
+        )
+
+    norm_a = _normalize(applied_a)
+    norm_b = _normalize(applied_b)
+    if norm_a is None or norm_b is None:
+        equivalent = applied_a == applied_b
+        status = (
+            PatchComparisonStatus.EQUIVALENT
+            if equivalent
+            else PatchComparisonStatus.UNPARSEABLE_OUTPUT_MISMATCH
+        )
+    else:
+        equivalent = norm_a == norm_b
+        status = (
+            PatchComparisonStatus.EQUIVALENT
+            if equivalent
+            else PatchComparisonStatus.SEMANTIC_MISMATCH
+        )
+    return PatchComparison(
+        equivalent=equivalent,
+        status=status,
+        applied_a=True,
+        applied_b=True,
+    )
 
 
 def patches_equivalent(
@@ -124,25 +233,10 @@ def patches_equivalent(
     patch_a: str,
     patch_b: str,
 ) -> bool:
-    """Whether two diffs produce AST-equivalent patched files.
+    """Backward-compatible boolean equivalence helper.
 
-    Both diffs are applied to baseline_source. The resulting sources are
-    AST-normalized and compared. See module docstring for failure-mode
-    semantics.
+    Indeterminate comparisons return False for legacy callers. Verifier logic
+    that measures load-bearing reasoning should call `compare_patches` so apply
+    failures are not counted as semantic changes.
     """
-    applied_a = apply_patch(baseline_source, patch_a)
-    applied_b = apply_patch(baseline_source, patch_b)
-
-    if applied_a is None and applied_b is None:
-        # Cannot establish equivalence from two failures.
-        return False
-    if applied_a is None or applied_b is None:
-        # One side applied, the other did not. Not equivalent.
-        return False
-
-    norm_a = _normalize(applied_a)
-    norm_b = _normalize(applied_b)
-    if norm_a is None or norm_b is None:
-        # Fall back to byte comparison if either fails to parse.
-        return applied_a == applied_b
-    return norm_a == norm_b
+    return compare_patches(baseline_source, patch_a, patch_b).equivalent is True

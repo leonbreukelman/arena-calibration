@@ -69,6 +69,7 @@ class Fixture:
     kind: FixtureKind
     ground_truth: GroundTruth
     reasoning_components: list[str]
+    reasoning_corruptions: list[str | None]
     measurement: Measurement
     root: Path
 
@@ -121,6 +122,16 @@ def load_fixture(manifest_path: Path | str) -> Fixture:
     components = list(raw["reasoning_components"])
     if not components:
         raise ValueError(f"fixture {fid} has empty reasoning_components")
+    corruptions_raw = raw.get("reasoning_corruptions", raw.get("corruptions"))
+    if corruptions_raw is None:
+        corruptions: list[str | None] = [None] * len(components)
+    else:
+        corruptions = list(corruptions_raw)
+        if len(corruptions) != len(components):
+            raise ValueError(
+                f"fixture {fid} has {len(corruptions)} reasoning_corruptions "
+                f"for {len(components)} reasoning_components"
+            )
 
     meas_raw = raw["measurement"]
     measurement = Measurement(
@@ -135,6 +146,7 @@ def load_fixture(manifest_path: Path | str) -> Fixture:
         kind=kind,
         ground_truth=ground_truth,
         reasoning_components=components,
+        reasoning_corruptions=corruptions,
         measurement=measurement,
         root=root,
     )

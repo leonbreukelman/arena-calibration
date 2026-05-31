@@ -1,0 +1,9 @@
+{
+  "reviewer": "Claude Code Opus alias",
+  "command_shape": "claude -p --model opus --effort high --max-budget-usd 2 --output-format json --permission-mode plan",
+  "prompt_path": "/tmp/arena_dspy_gepa_opus_postpatch_review_prompt.md",
+  "stdout_json": "docs/verification/2026-05-30-opus-dspy-gepa-postpatch-review.stdout.json",
+  "markdown_review": "docs/verification/2026-05-30-opus-dspy-gepa-postpatch-review.md",
+  "verdict": "ACCEPT",
+  "reported_cost_usd": 0.5144595000000001
+}

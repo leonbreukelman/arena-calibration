@@ -16,5 +16,10 @@ dev = [
     "pytest>=8.0",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["fixtures"]
+addopts = "--import-mode=importlib"
+
 [tool.setuptools]
 packages = ["arena"]

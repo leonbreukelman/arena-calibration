@@ -30,6 +30,12 @@ reasoning_components:
   - "therefore text[start:end] drops the character at index end from each span"
   - "adding +1 to end in the slice aligns the slice with the inclusive convention"
 
+reasoning_corruptions:
+  - "boundaries.py declares span (start, end) pairs as exclusive at the end boundary"
+  - "Python slicing text[a:b] includes the upper bound b"
+  - "therefore text[start:end] already keeps the character at index end from each span"
+  - "subtracting 1 from end in the slice aligns the slice with the inclusive convention"
+
 measurement:
   command: pytest -q tests/
   expected_baseline_fail: 1
