@@ -35,6 +35,7 @@ class PatchComparisonStatus(str, Enum):
 
     EQUIVALENT = "equivalent"
     SEMANTIC_MISMATCH = "semantic_mismatch"
+    UNPARSEABLE_OUTPUT_MISMATCH = "unparseable_output_mismatch"
     INDETERMINATE_BOTH_FAILED = "indeterminate_both_failed"
     INDETERMINATE_APPLY_FAILED = "indeterminate_apply_failed"
 
@@ -159,7 +160,13 @@ def _extract_target_name(patch_diff: str) -> str | None:
             if rest.startswith("b/"):
                 rest = rest[2:]
             path = PurePosixPath(rest)
-            if path.is_absolute() or ".." in path.parts or rest in {"", "/dev/null"}:
+            if (
+                path.is_absolute()
+                or ".." in path.parts
+                or "\\" in rest
+                or re.match(r"^[A-Za-z]:", rest)
+                or rest in {"", "/dev/null"}
+            ):
                 return None
             return rest
     return None
@@ -174,7 +181,8 @@ def compare_patches(
 
     `equivalent` is:
       - True when both patches apply and normalize to the same AST/source
-      - False when both patches apply and produce different semantics
+      - False when both patches apply and produce different semantics, or when
+        unparseable patched outputs differ byte-for-byte
       - None when either patch cannot be applied, so the comparison is not a
         trustworthy reasoning-dependency signal
     """
@@ -200,15 +208,21 @@ def compare_patches(
     norm_b = _normalize(applied_b)
     if norm_a is None or norm_b is None:
         equivalent = applied_a == applied_b
+        status = (
+            PatchComparisonStatus.EQUIVALENT
+            if equivalent
+            else PatchComparisonStatus.UNPARSEABLE_OUTPUT_MISMATCH
+        )
     else:
         equivalent = norm_a == norm_b
-    return PatchComparison(
-        equivalent=equivalent,
-        status=(
+        status = (
             PatchComparisonStatus.EQUIVALENT
             if equivalent
             else PatchComparisonStatus.SEMANTIC_MISMATCH
-        ),
+        )
+    return PatchComparison(
+        equivalent=equivalent,
+        status=status,
         applied_a=True,
         applied_b=True,
     )

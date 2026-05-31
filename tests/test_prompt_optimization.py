@@ -72,6 +72,23 @@ def test_patch_target_paths_cannot_escape_temp_apply_directory():
 
     assert _extract_target_name("--- a/x.py\n+++ b/../escape.py\n") is None
     assert _extract_target_name("--- a/x.py\n+++ /tmp/escape.py\n") is None
+    assert _extract_target_name("--- a/x.py\n+++ b/..\\escape.py\n") is None
+    assert _extract_target_name("--- a/x.py\n+++ C:\\tmp\\escape.py\n") is None
+    assert _extract_target_name("--- a/x.py\n+++ b/C:\\tmp\\escape.py\n") is None
+    assert _extract_target_name("--- a/x.py\n+++ C:/tmp/escape.py\n") is None
+
+
+def test_compare_patches_reports_unparseable_output_mismatch_separately():
+    from arena.patch_eq import PatchComparisonStatus, compare_patches
+
+    baseline = "value = 1\n"
+    invalid_a = "--- a/tokenizer.py\n+++ b/tokenizer.py\n@@ -1 +1 @@\n-value = 1\n+def broken(:\n"
+    invalid_b = "--- a/tokenizer.py\n+++ b/tokenizer.py\n@@ -1 +1 @@\n-value = 1\n+def other(:\n"
+
+    comparison = compare_patches(baseline, invalid_a, invalid_b)
+
+    assert comparison.equivalent is False
+    assert comparison.status == PatchComparisonStatus.UNPARSEABLE_OUTPUT_MISMATCH
 
 
 def test_compare_patches_classifies_unappliable_outputs_as_indeterminate_not_changed():

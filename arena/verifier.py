@@ -62,7 +62,7 @@ IS_STUB: bool = False
 class PerturbationOutcome:
     perturbation: str  # Perturbation.value
     changed_patch: bool
-    sample_diffs_changed: int  # how many of N_SAMPLES produced a non-equivalent patch
+    sample_diffs_changed: int  # how many of N_SAMPLES produced a definite non-equivalent output
     sample_diffs_indeterminate: int = 0
     majority_comparison: str = ""
 
