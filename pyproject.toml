@@ -13,6 +13,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "coverage>=7.0",
     "pytest>=8.0",
 ]
 
@@ -20,6 +21,13 @@ dev = [
 testpaths = ["tests"]
 norecursedirs = ["fixtures"]
 addopts = "--import-mode=importlib"
+
+[tool.coverage.run]
+source = ["arena"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
 
 [tool.setuptools]
 packages = ["arena"]
