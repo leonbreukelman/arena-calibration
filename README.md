@@ -199,6 +199,8 @@ results/      discrimination matrices
 
 ## Usage
 
+Requires Python 3.12+. The repo includes `.python-version` so `uv`/pyenv-style tools select Python 3.12 by default.
+
 ```
 python -m arena.runner                              # default paths
 python -m arena.runner --fixtures-dir fixtures --results-dir results

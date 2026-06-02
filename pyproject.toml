@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "arena-calibration"
 version = "0.0.1"
 description = "Calibration harness for build-arena Verifier and Scorer"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "pyyaml>=6.0",
 ]
