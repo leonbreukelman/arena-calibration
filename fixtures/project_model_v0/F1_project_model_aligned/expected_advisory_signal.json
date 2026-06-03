@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "project-model-advisory-signal/v0",
+  "projectModelId": "arena_calibration_project_model_v0_fixtures",
+  "candidateId": "f1_project_model_aligned_candidate",
+  "componentAlignment": [
+    {
+      "componentId": "contract_consumption",
+      "status": "aligned",
+      "explanation": "The proposal names the parent contract and avoids a local schema.",
+      "evidenceRefs": [
+        "proposal.md",
+        "project_model.json"
+      ]
+    },
+    {
+      "componentId": "fixture_manifest",
+      "status": "aligned",
+      "explanation": "It stores proposal, rationale, labels, expected signals, and explanations per fixture.",
+      "evidenceRefs": [
+        "manifest.yaml",
+        "expected_advisory_signal.json"
+      ]
+    },
+    {
+      "componentId": "hermetic_harness",
+      "status": "aligned",
+      "explanation": "The checker compares JSON signals locally without live providers.",
+      "evidenceRefs": [
+        "arena/project_model_fixtures.py"
+      ]
+    },
+    {
+      "componentId": "docs_feedback",
+      "status": "aligned",
+      "explanation": "README taxonomy is updated from patch-only F3 to pre-code reasoning.",
+      "evidenceRefs": [
+        "README.md"
+      ]
+    }
+  ],
+  "invariantViolations": [],
+  "dependencyViolations": [],
+  "unsupportedAssumptions": [],
+  "evidenceGroundingGaps": [],
+  "nearNeighborResistance": [
+    {
+      "alternativeId": "live_provider_default",
+      "status": "distinguished",
+      "explanation": "The proposal explicitly keeps local fixture signals for default checks."
+    },
+    {
+      "alternativeId": "patch_only_f3",
+      "status": "distinguished",
+      "explanation": "It includes a non-code F3 fixture and README wording."
+    },
+    {
+      "alternativeId": "decorative_readme_only",
+      "status": "distinguished",
+      "explanation": "It includes fixtures and a runner, not only text edits."
+    }
+  ],
+  "fLabelHint": {
+    "label": "F1",
+    "confidence": "high",
+    "explanation": "Aligned, load-bearing, model-consistent reasoning."
+  }
+}

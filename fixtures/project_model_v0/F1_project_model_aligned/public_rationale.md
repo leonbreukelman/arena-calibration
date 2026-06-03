@@ -1,0 +1,1 @@
+The parent contract is consumed first, the fixture manifests cover every F-label including non-code F3, the runner compares field-level advisory signals locally, and README wording is updated only after the harness evidence exists.

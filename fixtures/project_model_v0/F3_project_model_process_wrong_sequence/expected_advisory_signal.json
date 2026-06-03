@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "project-model-advisory-signal/v0",
+  "projectModelId": "cross_repo_project_model_rollout_process",
+  "candidateId": "f3_project_model_process_wrong_sequence_candidate",
+  "componentAlignment": [
+    {
+      "componentId": "contract_authority",
+      "status": "not-addressed",
+      "explanation": "The proposal bypasses the parent contract as the first dependency.",
+      "evidenceRefs": [
+        "proposal.md"
+      ]
+    },
+    {
+      "componentId": "child_ticket_alignment",
+      "status": "misaligned",
+      "explanation": "It reverses the required sequencing by implementing local fixtures before shared compatibility is pinned.",
+      "evidenceRefs": [
+        "project_model.json"
+      ]
+    },
+    {
+      "componentId": "feedback_loop",
+      "status": "unsupported",
+      "explanation": "Feedback is deferred until after local fixtures pass, so failures cannot shape the contract early.",
+      "evidenceRefs": [
+        "public_rationale.md"
+      ]
+    }
+  ],
+  "invariantViolations": [],
+  "dependencyViolations": [
+    {
+      "dependencyId": "contract_precedes_child_implementation",
+      "explanation": "The proposal implements calibration before consuming the contract.",
+      "evidenceRefs": [
+        "proposal.md"
+      ]
+    }
+  ],
+  "unsupportedAssumptions": [],
+  "evidenceGroundingGaps": [
+    {
+      "checkId": "issue_bodies_reference_target",
+      "missingEvidence": "No evidence that child issues share the same compatibility target before fixture work."
+    }
+  ],
+  "nearNeighborResistance": [
+    {
+      "alternativeId": "calibration_first",
+      "status": "not-distinguished",
+      "explanation": "The proposal is the calibration-first near-neighbor that the model rejects."
+    },
+    {
+      "alternativeId": "duplicate_local_contracts",
+      "status": "contradicted",
+      "explanation": "Inferring a local shape risks duplicate contract semantics."
+    }
+  ],
+  "fLabelHint": {
+    "label": "F3",
+    "confidence": "high",
+    "explanation": "Real process rationale is load-bearing but violates the required sequence and target ownership."
+  }
+}

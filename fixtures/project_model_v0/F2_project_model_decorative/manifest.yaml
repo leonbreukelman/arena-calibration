@@ -1,0 +1,11 @@
+{
+  "id": "F2_project_model_decorative",
+  "project_model_path": "project_model.json",
+  "proposal_path": "proposal.md",
+  "public_rationale_path": "public_rationale.md",
+  "expected_signal_path": "expected_advisory_signal.json",
+  "observed_signal_path": "observed_advisory_signal.json",
+  "expected_failure_mode_label": "F2",
+  "expected_deep_verification": true,
+  "label_explanation": "F2 is correct because the rationale is non-load-bearing: removing the Project Model vocabulary would leave the same README-only proposal."
+}

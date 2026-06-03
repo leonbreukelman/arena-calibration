@@ -1,0 +1,349 @@
+{
+  "schemaVersion": "project-model/v0",
+  "id": "arena_calibration_project_model_v0_fixtures",
+  "source": {
+    "task": "Add Project Model v0 fixtures and a local advisory-signal harness for issue #3.",
+    "primaryBacklogItem": "https://github.com/leonbreukelman/arena-calibration/issues/3",
+    "repo": "leonbreukelman/arena-calibration",
+    "issue": "https://github.com/leonbreukelman/arena-calibration/issues/3"
+  },
+  "goal": "Prove F1/F2/F3/F4 discrimination for pre-code Project Model reasoning without requiring live provider calls.",
+  "nonGoals": [
+    "Do not redefine Project Model v0 locally.",
+    "Do not make Elenchus a truth oracle or production allow/deny gate.",
+    "Do not require live paid LLM/API calls for default verification.",
+    "Do not remove the existing patch-oriented fixtures unless replacement coverage is explicit."
+  ],
+  "components": [
+    {
+      "id": "contract_consumption",
+      "name": "Parent contract consumption",
+      "kind": "spec",
+      "riskLevel": "high",
+      "responsibilities": [
+        "Consume schemaVersion project-model/v0 and the parent field semantics instead of inventing a local schema."
+      ],
+      "ownedSurfaces": [
+        "parent build-arena issue #2",
+        "Project Model v0 compatibility notes"
+      ],
+      "observableCheckIds": [
+        "contract_target_check"
+      ]
+    },
+    {
+      "id": "fixture_manifest",
+      "name": "Project Model fixture manifests",
+      "kind": "fixture",
+      "riskLevel": "high",
+      "responsibilities": [
+        "Store proposal, public rationale, expected advisory signals, expected F-label, and label explanation per fixture."
+      ],
+      "ownedSurfaces": [
+        "fixtures/project_model_v0/*/manifest.yaml",
+        "expected_advisory_signal.json"
+      ],
+      "observableCheckIds": [
+        "f_label_matrix_check",
+        "expected_signal_check"
+      ]
+    },
+    {
+      "id": "hermetic_harness",
+      "name": "Hermetic advisory-signal harness",
+      "kind": "test",
+      "riskLevel": "high",
+      "responsibilities": [
+        "Compare observed Elenchus advisory-signal fields to fixture expectations without live model calls."
+      ],
+      "ownedSurfaces": [
+        "arena/project_model_fixtures.py",
+        "exercise_project_model_fixtures.py"
+      ],
+      "observableCheckIds": [
+        "fixture_runner_check"
+      ]
+    },
+    {
+      "id": "docs_feedback",
+      "name": "README taxonomy and feedback notes",
+      "kind": "documentation",
+      "riskLevel": "medium",
+      "responsibilities": [
+        "Move F3 language from patch-only framing to pre-code target, component, sequence, and example alignment."
+      ],
+      "ownedSurfaces": [
+        "README.md",
+        "issue #3 evidence comment"
+      ],
+      "observableCheckIds": [
+        "readme_f3_language_check"
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "contract_precedes_fixtures",
+      "fromComponent": "contract_consumption",
+      "toComponent": "fixture_manifest",
+      "kind": "precedes",
+      "description": "Fixture manifests target the parent contract before adding local checks.",
+      "observableCheckIds": [
+        "contract_target_check"
+      ]
+    },
+    {
+      "id": "fixtures_feed_harness",
+      "fromComponent": "fixture_manifest",
+      "toComponent": "hermetic_harness",
+      "kind": "feeds",
+      "description": "The harness compares actual advisory signals against manifest expectations.",
+      "observableCheckIds": [
+        "fixture_runner_check"
+      ]
+    },
+    {
+      "id": "harness_informs_docs",
+      "fromComponent": "hermetic_harness",
+      "toComponent": "docs_feedback",
+      "kind": "informs",
+      "description": "Harness results and fixture labels inform README taxonomy and issue feedback.",
+      "observableCheckIds": [
+        "readme_f3_language_check"
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "no_live_api_required",
+      "description": "Default acceptance uses fixture-local or supplied JSON signals and local tests only.",
+      "componentIds": [
+        "hermetic_harness"
+      ],
+      "observableCheckIds": [
+        "fixture_runner_check"
+      ]
+    },
+    {
+      "id": "advisory_not_oracle",
+      "description": "Elenchus signal hints are advisory calibration evidence, not automatic truth or action gates.",
+      "componentIds": [
+        "hermetic_harness",
+        "fixture_manifest"
+      ],
+      "observableCheckIds": [
+        "expected_signal_check"
+      ]
+    },
+    {
+      "id": "f3_not_patch_only",
+      "description": "F3 covers wrong target, component, sequence, level, or narrow example in pre-code reasoning, not only code patches.",
+      "componentIds": [
+        "fixture_manifest",
+        "docs_feedback"
+      ],
+      "observableCheckIds": [
+        "readme_f3_language_check"
+      ]
+    }
+  ],
+  "observableChecks": [
+    {
+      "id": "contract_target_check",
+      "componentId": "contract_consumption",
+      "mode": "inspection",
+      "description": "Verify fixture docs name schemaVersion project-model/v0 and parent issue #2.",
+      "observableSignal": "Fixture files and README refer to parent Project Model v0 rather than a local replacement.",
+      "evidenceRequired": [
+        "fixture manifest excerpt",
+        "README excerpt"
+      ],
+      "noLiveApi": true
+    },
+    {
+      "id": "f_label_matrix_check",
+      "componentId": "fixture_manifest",
+      "mode": "artifact-audit",
+      "description": "Inspect fixture labels and confirm F1/F2/F3/F4 coverage with at least two F3 fixtures.",
+      "observableSignal": "Manifest labels contain F1, F2, F3, F3, and F4.",
+      "evidenceRequired": [
+        "manifest paths",
+        "label list"
+      ],
+      "noLiveApi": true
+    },
+    {
+      "id": "expected_signal_check",
+      "componentId": "fixture_manifest",
+      "mode": "artifact-audit",
+      "description": "Inspect expected advisory-signal JSON for component alignment, violations, gaps, alternatives, and F-label hints.",
+      "observableSignal": "Each fixture has expected_advisory_signal.json with the Project Model advisory shape.",
+      "evidenceRequired": [
+        "expected signal files"
+      ],
+      "noLiveApi": true
+    },
+    {
+      "id": "fixture_runner_check",
+      "componentId": "hermetic_harness",
+      "mode": "test",
+      "description": "Run the local Project Model fixture checker.",
+      "observableSignal": "The checker reports per-fixture signal matches and Project Model quality results without a single aggregate score.",
+      "evidenceRequired": [
+        "terminal output",
+        "per-signal mismatch rows"
+      ],
+      "noLiveApi": true
+    },
+    {
+      "id": "readme_f3_language_check",
+      "componentId": "docs_feedback",
+      "mode": "inspection",
+      "description": "Review README F3 wording for pre-code reasoning language.",
+      "observableSignal": "README describes F3 beyond patch generalization and references Project Model fixture coverage.",
+      "evidenceRequired": [
+        "README excerpt"
+      ],
+      "noLiveApi": true
+    }
+  ],
+  "evidenceRequirements": [
+    {
+      "id": "local_test_output",
+      "description": "Terminal output from pytest and the Project Model fixture checker.",
+      "acceptedArtifactTypes": [
+        "terminal-output",
+        "pytest-log",
+        "json-report"
+      ],
+      "requiredFor": [
+        "hermetic_harness"
+      ]
+    },
+    {
+      "id": "fixture_file_excerpt",
+      "description": "Manifest and signal excerpts showing labels and expected advisory fields.",
+      "acceptedArtifactTypes": [
+        "yaml-excerpt",
+        "json-excerpt",
+        "file-path"
+      ],
+      "requiredFor": [
+        "fixture_manifest",
+        "contract_consumption"
+      ]
+    }
+  ],
+  "assumptions": [
+    {
+      "id": "parent_contract_available",
+      "description": "The parent Project Model v0 contract has been emitted on the build-arena issue branch.",
+      "status": "confirmed"
+    },
+    {
+      "id": "fixture_local_signals_are_scripted",
+      "description": "Fixture-local observed signals are scripted stand-ins for default hermetic verification.",
+      "status": "confirmed"
+    }
+  ],
+  "risks": [
+    {
+      "id": "local_redefinition",
+      "componentId": "contract_consumption",
+      "level": "high",
+      "description": "The calibration repo could drift into owning a different local Project Model schema.",
+      "mitigation": "Keep parent issue and schemaVersion references in fixture data and docs."
+    },
+    {
+      "id": "ambiguous_fixture_label",
+      "componentId": "fixture_manifest",
+      "level": "high",
+      "description": "A fixture could blur F2 decorative rationale with F3 wrong-target rationale.",
+      "mitigation": "Store label explanations and expected advisory signal fields separately."
+    },
+    {
+      "id": "single_score_hiding_ambiguity",
+      "componentId": "hermetic_harness",
+      "level": "high",
+      "description": "A single overall score could hide which signal failed.",
+      "mitigation": "Report component, invariant, dependency, evidence, near-neighbor, and F-label mismatches separately."
+    }
+  ],
+  "nearNeighborAlternatives": [
+    {
+      "id": "live_provider_default",
+      "description": "Run live Elenchus or LLM providers by default.",
+      "whyNotPrimary": "Default verification must remain hermetic and cost-free.",
+      "distinguishingEvidence": [
+        "fixture-local observed_signal.json",
+        "noLiveApi checks"
+      ]
+    },
+    {
+      "id": "patch_only_f3",
+      "description": "Keep F3 framed only as code patch generalization.",
+      "whyNotPrimary": "The parent issue defines F3 as pre-code wrong target/component/sequence/example reasoning.",
+      "distinguishingEvidence": [
+        "non-code F3 fixture",
+        "README taxonomy update"
+      ]
+    },
+    {
+      "id": "decorative_readme_only",
+      "description": "Only edit README taxonomy and call the project aligned.",
+      "whyNotPrimary": "Issue #3 requires fixtures, expected signals, and a repeatable harness.",
+      "distinguishingEvidence": [
+        "fixture manifests",
+        "runner output"
+      ]
+    }
+  ],
+  "heldOutProbes": [
+    {
+      "id": "parent_contract_drift_probe",
+      "componentId": "contract_consumption",
+      "probeType": "counterexample",
+      "scenario": "A fixture uses schemaVersion project-model/v0.1 or local field names.",
+      "expectedBehavior": "The checker reports Project Model feedback rather than silently accepting the fixture.",
+      "evidenceRequired": [
+        "quality issue code"
+      ]
+    },
+    {
+      "id": "non_code_f3_probe",
+      "componentId": "fixture_manifest",
+      "probeType": "held-out-example",
+      "scenario": "A process or strategy proposal is real but violates ordering or component targeting.",
+      "expectedBehavior": "Expected advisory signals classify it as F3, not F2.",
+      "evidenceRequired": [
+        "F3 non-code fixture manifest",
+        "signal comparison row"
+      ]
+    },
+    {
+      "id": "signal_mismatch_probe",
+      "componentId": "hermetic_harness",
+      "probeType": "perturbation",
+      "scenario": "An observed signal reports F1 for an expected F3 fixture.",
+      "expectedBehavior": "The checker reports fLabelHint.label and component status mismatches.",
+      "evidenceRequired": [
+        "mismatch report"
+      ]
+    }
+  ],
+  "verificationGaps": [],
+  "unclassifiedProjectSurface": [],
+  "advisorySignalHandoff": {
+    "consumer": "elenchus-core",
+    "expectedFields": [
+      "componentAlignment",
+      "invariantViolations",
+      "dependencyViolations",
+      "unsupportedAssumptions",
+      "evidenceGroundingGaps",
+      "nearNeighborResistance",
+      "fLabelHint"
+    ],
+    "optionalFLabelHint": true
+  }
+}

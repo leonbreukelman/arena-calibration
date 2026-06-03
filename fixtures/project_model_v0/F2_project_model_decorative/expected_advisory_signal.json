@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "project-model-advisory-signal/v0",
+  "projectModelId": "arena_calibration_project_model_v0_fixtures",
+  "candidateId": "f2_project_model_decorative_candidate",
+  "componentAlignment": [
+    {
+      "componentId": "contract_consumption",
+      "status": "unsupported",
+      "explanation": "It names the contract but supplies no artifact showing the versioned shape is consumed.",
+      "evidenceRefs": [
+        "proposal.md"
+      ]
+    },
+    {
+      "componentId": "fixture_manifest",
+      "status": "not-addressed",
+      "explanation": "No fixture manifest or expected signal files are added.",
+      "evidenceRefs": []
+    },
+    {
+      "componentId": "hermetic_harness",
+      "status": "not-addressed",
+      "explanation": "No runner/check exists to compare observed and expected signals.",
+      "evidenceRefs": []
+    },
+    {
+      "componentId": "docs_feedback",
+      "status": "unsupported",
+      "explanation": "README prose is decorative without fixture evidence.",
+      "evidenceRefs": [
+        "proposal.md"
+      ]
+    }
+  ],
+  "invariantViolations": [],
+  "dependencyViolations": [],
+  "unsupportedAssumptions": [],
+  "evidenceGroundingGaps": [
+    {
+      "checkId": "f_label_matrix_check",
+      "missingEvidence": "No Project Model fixture manifests."
+    },
+    {
+      "checkId": "expected_signal_check",
+      "missingEvidence": "No expected advisory-signal JSON."
+    },
+    {
+      "checkId": "fixture_runner_check",
+      "missingEvidence": "No hermetic checker output."
+    }
+  ],
+  "nearNeighborResistance": [
+    {
+      "alternativeId": "decorative_readme_only",
+      "status": "not-distinguished",
+      "explanation": "The proposal is exactly the decorative README-only alternative."
+    },
+    {
+      "alternativeId": "patch_only_f3",
+      "status": "not-distinguished",
+      "explanation": "It does not add the non-code F3 evidence needed to move beyond patch-only language."
+    }
+  ],
+  "fLabelHint": {
+    "label": "F2",
+    "confidence": "high",
+    "explanation": "Decorative rationale names the right concepts but does not constrain the artifact."
+  }
+}

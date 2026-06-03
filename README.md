@@ -18,6 +18,8 @@ where ground truth is known by construction?
 
 ## Fixture taxonomy
 
+### Patch-oriented Scorer/Verifier fixtures
+
 | Kind                 | Scorer should | Verifier should |
 | -------------------- | ------------- | --------------- |
 | `load_bearing_good`  | promote       | accept          |
@@ -29,24 +31,71 @@ where ground truth is known by construction?
 
 *Scorer is fooled by construction; Verifier is the catch.
 
+### Project Model v0 advisory-signal fixtures
+
+The Project Model fixture set lives under `fixtures/project_model_v0/` so the
+legacy patch-fixture loader continues to see only the four patch fixtures. These
+fixtures target the parent contract documented in build-arena issue #2 and
+`docs/schemas/project-model-v0.schema.json` on branch `issue-2-project-model-v0`;
+this repo stores calibration examples and compatibility checks, not a competing
+Project Model spec. Each Project Model fixture stores:
+
+- `project_model.json` using parent-contract `schemaVersion: project-model/v0`;
+- `proposal.md` / `public_rationale.md` for the pre-code candidate;
+- `expected_advisory_signal.json` for the Elenchus advisory signal expected by
+  calibration;
+- `observed_advisory_signal.json` as the fixture-local hermetic stand-in for a
+  future Elenchus output;
+- `manifest.yaml` with expected F-label, deep-verification expectation, and an
+  explanation of why the label is correct.
+
+| Label | Fixture intent | Signal expectation |
+| ----- | -------------- | ------------------ |
+| F1 | Aligned, load-bearing, model-consistent reasoning | components aligned; near-neighbors distinguished |
+| F2 | Decorative/fake/non-load-bearing rationale | unsupported/not-addressed components; evidence gaps |
+| F3 | Real/load-bearing rationale aimed at the wrong target, component, sequence, level, or too-narrow visible example | specific misalignment / dependency / near-neighbor signals, not fake-rationale collapse |
+| F4 | Weak/trivial proposal rejected before expensive or deep verification | not-addressed components and missing evidence; `expected_deep_verification: false` |
+
+F3 is pre-code proposal-reasoning failure. Code patches are only one example.
+The Project Model fixtures include both a code-adjacent too-narrow tokenizer
+case and a non-code process/sequence case.
+
 ## Status
 
 - [x] F1 load_bearing_good
 - [x] F2 fabricated_good
 - [x] F3 bad_passes_tests
 - [x] F4 trivial
+- [x] Project Model v0 F1/F2/F3/F4 advisory-signal fixtures
+- [x] Project Model v0 hermetic signal checker
 - [x] Scorer
 - [x] Runner
 - [x] Verifier (Lanham four-test, Haiku-driven worker, Opus judge)
 
 ## Operating the Verifier
 
-The hermetic exercise requires no network and no API key. It drives the
-Verifier through F1, F2, F3 with deterministic scripted workers.
+The patch-fixture hermetic exercise requires no network and no API key. It
+drives the Verifier through F1, F2, F3 with deterministic scripted workers.
 
 ```
 python exercise_verifier.py
 ```
+
+The Project Model advisory-signal fixtures are also hermetic. They compare
+fixture-local scripted advisory signals against the expected signal shape and
+run a Project Model quality/meta-F3 guard. This is a checker for fixture and
+signal compatibility, not a live Elenchus call and not a truth oracle.
+
+```
+python exercise_project_model_fixtures.py
+python exercise_project_model_fixtures.py --json
+python exercise_project_model_fixtures.py --observed-dir path/to/elenchus-signals
+```
+
+When `--observed-dir` is supplied, the checker reads `<fixture-id>.json` files
+from that directory and compares those actual Elenchus-style outputs against the
+fixture expectations. Without it, the fixture-local `observed_advisory_signal.json`
+files provide the hermetic default.
 
 Live runs consume paid API capacity or subscription quota. The runner fails
 closed unless `--confirm-live` is supplied. Inspect call count and budget
@@ -162,21 +211,40 @@ predicted load-bearing patterns).
 | F3 | promote | accept  | ~1.00 | ✗ (Lanham-only insufficiency) |
 | F4 | reject  | n/a (not invoked) | n/a | ✓ |
 
-F3's mismatch is calibrated and expected. It motivates the second
-Verifier axis (patch-generalization), which is backlog for a later
-milestone, not work for this one.
+F3's mismatch is calibrated and expected for the patch-oriented Lanham-only
+exercise. In the Project Model fixture set, F3 is represented more generally as
+real/load-bearing pre-code reasoning that is aimed at the wrong target,
+component, sequence, level, or too-narrow visible example.
+
+## Documented expected Project Model fixture matrix
+
+| Fixture | Expected label | Signal pattern |
+|---|---|---|
+| F1_project_model_aligned | F1 | all components aligned; near-neighbors distinguished |
+| F2_project_model_decorative | F2 | decorative/unsupported rationale; missing fixture/harness evidence |
+| F3_project_model_code_too_narrow | F3 | source/generalization components misaligned around a visible example |
+| F3_project_model_process_wrong_sequence | F3 | process dependency violated; local calibration happens before contract alignment |
+| F4_project_model_trivial | F4 | not-addressed components; missing evidence; deep verification not expected |
+
+The Project Model checker reports component, invariant, dependency, evidence,
+near-neighbor, F-label, and model-quality outcomes separately. Its agreement
+rule is exact field-level comparison of fixture signal IDs, statuses,
+explanations, evidence refs, and hint fields; it does not hide ambiguity behind
+one numeric score. If a Project Model fails the quality gate,
+the report marks feedback for `build-arena Project Model v0`; signal mismatches
+are marked as `elenchus-core advisory signal shape` feedback.
 
 ## Findings from 4-fixture construction
 
-**F3 surfaced an architectural gap before any Verifier code exists.** A Verifier built purely on the Lanham four-test would correctly handle F1 (accept) and F2 (reject) but wrongly accept F3 (lookup-table hack with load-bearing-but-misdirected reasoning).
+**F3 surfaced an architectural gap before any Verifier code exists.** A Verifier built purely on the Lanham four-test would correctly handle F1 (accept) and F2 (reject) but wrongly accept the original code-adjacent F3 (lookup-table hack with load-bearing-but-misdirected reasoning).
 
 Consequence: the Verifier needs at least two orthogonal axes:
-1. **Reasoning ablation** (Lanham four-test) — catches fabricated reasoning that doesn't constrain the patch
-2. **Patch generalization** — catches honest reasoning constrained to a too-narrow target (memorization, hardcoding, special-casing)
+1. **Reasoning ablation** (Lanham four-test) — catches fabricated reasoning that doesn't constrain the artifact
+2. **Project/target generalization** — catches honest reasoning aimed at the wrong objective, component, sequence, level, or too-narrow visible example
 
 This is the orthogonal-axis pattern from the constitution applied at the Verifier layer. Constitution amendment deferred to after the calibration set is complete; do not modify the constitution mid-build.
 
-**Backlog**: `elenchus-validator` (https://github.com/leonbreukelman/elenchus-validator) is a candidate for the patch-generalization axis via its contextGrounding and alternativeResistance subscores. Not work for this fixture pass.
+**Backlog**: `elenchus-validator` (https://github.com/leonbreukelman/elenchus-validator) is a candidate for the project/target-generalization axis via its contextGrounding and alternativeResistance subscores. Not work for this fixture pass.
 
 ## Fixture shape variance (positional confound discipline)
 
@@ -193,7 +261,7 @@ Variance in component count (4, 4, 5, 2), conclusion slot (4, 4, 3, 1), and base
 
 ```
 arena/        harness code
-fixtures/     frozen fixture set
+fixtures/     frozen patch fixture set plus fixtures/project_model_v0 advisory-signal cases
 results/      discrimination matrices
 ```
 
