@@ -1,0 +1,12 @@
+id: F3_project_model_v1_reversed_contract_direction
+expected_failure_mode_label: F3
+expected_deep_verification: true
+case_description: The contract says runtime feeds checker, but the supporting edge points checker to runtime.
+project_model_path: project_model.json
+proposal_path: proposal.md
+public_rationale_path: public_rationale.md
+expected_signal_path: expected_advisory_signal.json
+observed_signal_path: observed_advisory_signal.json
+expected_v1_quality_issue_codes:
+  - reversed_contract_direction
+label_explanation: The target relation is real, but the direction is inverted.

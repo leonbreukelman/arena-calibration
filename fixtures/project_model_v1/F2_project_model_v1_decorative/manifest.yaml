@@ -1,0 +1,11 @@
+id: F2_project_model_v1_decorative
+expected_failure_mode_label: F2
+expected_deep_verification: true
+case_description: Syntactically valid v1 model paired with decorative/generic rationale that does not carry the implementation decision.
+project_model_path: project_model.json
+proposal_path: proposal.md
+public_rationale_path: public_rationale.md
+expected_signal_path: expected_advisory_signal.json
+observed_signal_path: observed_advisory_signal.json
+expected_v1_quality_issue_codes: []
+label_explanation: The v1 artifact is valid, but the candidate rationale is generic ceremony rather than load-bearing decomposition.

@@ -1,0 +1,12 @@
+id: F4_project_model_v1_fabricated_provenance_ref
+expected_failure_mode_label: F4
+expected_deep_verification: false
+case_description: Snapshot component claims provenance that does not exist on any ProjectGraph node or edge.
+project_model_path: project_model.json
+proposal_path: proposal.md
+public_rationale_path: public_rationale.md
+expected_signal_path: expected_advisory_signal.json
+observed_signal_path: observed_advisory_signal.json
+expected_v1_quality_issue_codes:
+  - fabricated_provenance_ref
+label_explanation: Fabricated provenance breaks trust in the decomposition evidence.

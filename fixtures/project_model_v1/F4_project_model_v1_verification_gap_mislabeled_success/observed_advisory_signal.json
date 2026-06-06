@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "project-model-v1-calibration-signal/v0",
+  "projectModelId": "arena_calibration_F4_project_model_v1_verification_gap_mislabeled_success",
+  "candidateId": "F4_project_model_v1_verification_gap_mislabeled_success_candidate",
+  "componentAlignment": [
+    {
+      "componentId": "runtime_patch_surface",
+      "status": "aligned",
+      "explanation": "runtime_patch_surface: aligned",
+      "evidenceRefs": [
+        "project_model.json",
+        "manifest.yaml"
+      ]
+    },
+    {
+      "componentId": "v1_checker",
+      "status": "gap_mislabeled_success",
+      "explanation": "v1_checker: gap_mislabeled_success",
+      "evidenceRefs": [
+        "project_model.json",
+        "manifest.yaml"
+      ]
+    },
+    {
+      "componentId": "fixture_reporter",
+      "status": "aligned",
+      "explanation": "fixture_reporter: aligned",
+      "evidenceRefs": [
+        "project_model.json",
+        "manifest.yaml"
+      ]
+    }
+  ],
+  "invariantViolations": [],
+  "dependencyViolations": [],
+  "unsupportedAssumptions": [],
+  "evidenceGroundingGaps": [],
+  "nearNeighborResistance": [
+    {
+      "alternativeId": "near_patch_only",
+      "status": "distinguished",
+      "explanation": "Fixture keeps v1 graph semantics visible."
+    },
+    {
+      "alternativeId": "near_single_score",
+      "status": "distinguished",
+      "explanation": "Fixture keeps v0 and v1 reports separate."
+    }
+  ],
+  "fLabelHint": {
+    "label": "F4",
+    "confidence": "high",
+    "explanation": "A critical gap cannot be represented as a successful gate pass."
+  }
+}

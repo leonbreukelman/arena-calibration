@@ -1,0 +1,11 @@
+id: F1_project_model_v1_aligned
+expected_failure_mode_label: F1
+expected_deep_verification: true
+case_description: Valid rich Project Model v1 snapshot with graph, gate pass, probes, checks, provenance, and separate reporting semantics.
+project_model_path: project_model.json
+proposal_path: proposal.md
+public_rationale_path: public_rationale.md
+expected_signal_path: expected_advisory_signal.json
+observed_signal_path: observed_advisory_signal.json
+expected_v1_quality_issue_codes: []
+label_explanation: The candidate is load-bearing, schema-aligned, and separates v0/v1 calibration surfaces.

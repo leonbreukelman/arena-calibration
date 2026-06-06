@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "project-model-v1-calibration-signal/v0",
+  "projectModelId": "arena_calibration_F3_project_model_v1_missing_graph_edge",
+  "candidateId": "F3_project_model_v1_missing_graph_edge_candidate",
+  "componentAlignment": [
+    {
+      "componentId": "runtime_patch_surface",
+      "status": "aligned",
+      "explanation": "runtime_patch_surface: aligned",
+      "evidenceRefs": [
+        "project_model.json",
+        "manifest.yaml"
+      ]
+    },
+    {
+      "componentId": "v1_checker",
+      "status": "missing_edge",
+      "explanation": "v1_checker: missing_edge",
+      "evidenceRefs": [
+        "project_model.json",
+        "manifest.yaml"
+      ]
+    },
+    {
+      "componentId": "fixture_reporter",
+      "status": "aligned",
+      "explanation": "fixture_reporter: aligned",
+      "evidenceRefs": [
+        "project_model.json",
+        "manifest.yaml"
+      ]
+    }
+  ],
+  "invariantViolations": [],
+  "dependencyViolations": [],
+  "unsupportedAssumptions": [],
+  "evidenceGroundingGaps": [],
+  "nearNeighborResistance": [
+    {
+      "alternativeId": "near_patch_only",
+      "status": "distinguished",
+      "explanation": "Fixture keeps v1 graph semantics visible."
+    },
+    {
+      "alternativeId": "near_single_score",
+      "status": "distinguished",
+      "explanation": "Fixture keeps v0 and v1 reports separate."
+    }
+  ],
+  "fLabelHint": {
+    "label": "F3",
+    "confidence": "high",
+    "explanation": "The intended contract is real, but its graph support is missing."
+  }
+}

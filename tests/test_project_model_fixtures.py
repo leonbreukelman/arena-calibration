@@ -282,6 +282,208 @@ def test_existing_patch_fixture_loader_ignores_nested_project_model_fixture_mani
     ]
 
 
+def test_project_model_v1_schema_vendor_is_pinned_to_recorded_hash():
+    import hashlib
+
+    from arena.project_model_fixtures import PROJECT_MODEL_V1_SCHEMA_PATH, PROJECT_MODEL_V1_SCHEMA_SHA256_PATH
+
+    schema_path = PROJECT_MODEL_V1_SCHEMA_PATH
+    hash_path = PROJECT_MODEL_V1_SCHEMA_SHA256_PATH
+    assert schema_path.is_file()
+    assert hash_path.is_file()
+    expected_hash = hash_path.read_text().strip().split()[0]
+    observed_hash = hashlib.sha256(schema_path.read_bytes()).hexdigest()
+    assert observed_hash == expected_hash
+
+
+def test_project_model_v1_fixtures_have_required_shape_and_failure_coverage():
+    from arena.project_model_fixtures import (
+        PROJECT_MODEL_V1_SCHEMA_VERSION,
+        PROJECT_MODEL_V1_SIGNAL_SCHEMA_VERSION,
+        REQUIRED_V1_FAILURE_CASES,
+        load_all_project_model_v1_fixtures,
+    )
+
+    fixtures = load_all_project_model_v1_fixtures(Path("fixtures/project_model_v1"))
+
+    expected_ids = sorted(REQUIRED_V1_FAILURE_CASES)
+    assert len(expected_ids) == 12
+    assert [fixture.id for fixture in fixtures] == expected_ids
+    labels = {fixture.expected_failure_mode_label for fixture in fixtures}
+    assert labels == {"F1", "F2", "F3", "F4"}
+    assert sum(1 for fixture in fixtures if fixture.expected_failure_mode_label == "F3") >= 2
+
+    required_named_cases = {
+        "F1_project_model_v1_aligned",
+        "F2_project_model_v1_decorative",
+        "F3_project_model_v1_code_too_narrow",
+        "F3_project_model_v1_process_wrong_sequence",
+        "F4_project_model_v1_trivial",
+        "F4_project_model_v1_fabricated_provenance_ref",
+        "F3_project_model_v1_missing_graph_edge",
+        "F3_project_model_v1_reversed_contract_direction",
+        "F4_project_model_v1_self_referential_contract",
+        "F3_project_model_v1_weak_held_out_probe",
+        "F4_project_model_v1_verification_gap_mislabeled_success",
+        "F4_project_model_v1_protected_ownership_leak",
+    }
+    assert set(expected_ids) == required_named_cases
+
+    for fixture in fixtures:
+        model = fixture.project_model
+        assert model["schemaVersion"] == PROJECT_MODEL_V1_SCHEMA_VERSION
+        assert model["projectGraph"]["nodes"]
+        assert model["projectGraph"]["edges"]
+        assert any(node["provenance_refs"] for node in model["projectGraph"]["nodes"])
+        assert "passed" in model["gateReport"]
+        assert {artifact["artifactType"] for artifact in model["derivedArtifacts"]} >= {
+            "jsonl-events",
+            "sqlite-projection",
+            "markdown-summary",
+        }
+        assert model["compatibility"]["projectModelV0Path"] == "project-model-v0.json"
+        assert fixture.expected_signal["schemaVersion"] == PROJECT_MODEL_V1_SIGNAL_SCHEMA_VERSION
+        assert fixture.observed_signal["schemaVersion"] == PROJECT_MODEL_V1_SIGNAL_SCHEMA_VERSION
+
+
+def test_project_model_v1_quality_gate_reports_expected_issue_codes_exactly_and_deterministically():
+    from arena.project_model_fixtures import evaluate_project_model_v1_quality, load_all_project_model_v1_fixtures
+
+    fixtures = load_all_project_model_v1_fixtures(Path("fixtures/project_model_v1"))
+    expected_by_id = {fixture.id: fixture.expected_v1_quality_issue_codes for fixture in fixtures}
+
+    for fixture in fixtures:
+        issues = evaluate_project_model_v1_quality(fixture.project_model)
+        issue_codes = sorted({issue["code"] for issue in issues})
+        assert issue_codes == sorted(fixture.expected_v1_quality_issue_codes), fixture.id
+        assert issues == sorted(issues, key=lambda issue: (issue["code"], issue["location"], issue["message"]))
+        assert all(issue["feedback"] == "build-arena Project Model v1" for issue in issues)
+
+    assert expected_by_id["F1_project_model_v1_aligned"] == []
+    assert expected_by_id["F4_project_model_v1_fabricated_provenance_ref"] == ["fabricated_provenance_ref"]
+    assert expected_by_id["F3_project_model_v1_missing_graph_edge"] == ["missing_graph_edge_for_contract"]
+    assert expected_by_id["F3_project_model_v1_reversed_contract_direction"] == ["reversed_contract_direction"]
+    assert expected_by_id["F4_project_model_v1_self_referential_contract"] == ["self_referential_contract"]
+    assert expected_by_id["F3_project_model_v1_weak_held_out_probe"] == ["weak_held_out_probe"]
+    assert expected_by_id["F4_project_model_v1_verification_gap_mislabeled_success"] == ["verification_gap_mislabeled_success"]
+    assert expected_by_id["F4_project_model_v1_protected_ownership_leak"] == ["protected_ownership_leak"]
+
+
+def test_project_model_v1_quality_gate_reports_schema_and_reference_problems():
+    from arena.project_model_fixtures import evaluate_project_model_v1_quality, load_project_model_v1_fixture
+
+    fixture = load_project_model_v1_fixture(Path("fixtures/project_model_v1/F1_project_model_v1_aligned/manifest.yaml"))
+    bad_model = json.loads(json.dumps(fixture.project_model))
+    bad_model["schemaVersion"] = "project-model/v999"
+    bad_model.pop("project")
+    bad_model["snapshot"]["components"][0]["owned_node_ids"].append("missing_node")
+    bad_model["snapshot"]["components"][0]["check_ids"].append("missing_check")
+    bad_model["snapshot"]["contracts"][0]["provenance_refs"].append("missing_provenance")
+    bad_model["snapshot"]["contracts"][0]["supporting_edge_ids"].append("missing_edge")
+
+    issues = evaluate_project_model_v1_quality(bad_model)
+    issue_codes = {issue["code"] for issue in issues}
+
+    assert {
+        "unsupported_schema_version",
+        "missing_required_field",
+        "schema_validation_error",
+        "missing_graph_node_reference",
+        "missing_check_reference",
+        "fabricated_provenance_ref",
+        "missing_graph_edge_for_contract",
+    }.issubset(issue_codes)
+
+
+def test_project_model_v1_quality_gate_catches_independent_adversarial_mutations():
+    from arena.project_model_fixtures import evaluate_project_model_v1_quality, load_project_model_v1_fixture
+
+    fixture = load_project_model_v1_fixture(Path("fixtures/project_model_v1/F1_project_model_v1_aligned/manifest.yaml"))
+    no_probe_model = json.loads(json.dumps(fixture.project_model))
+    no_probe_model["snapshot"]["held_out_probes"] = []
+    assert "weak_held_out_probe" in {issue["code"] for issue in evaluate_project_model_v1_quality(no_probe_model)}
+
+    misrouted_model = json.loads(json.dumps(fixture.project_model))
+    misrouted_model["projectGraph"]["edges"].append({
+        "id": "edge_runtime_to_reporter_misroute",
+        "kind": "feeds",
+        "from_node_id": "n_runtime_patch_surface",
+        "to_node_id": "n_fixture_reporter",
+        "label": "Runtime bypasses checker and feeds reporter directly",
+        "provenance_refs": misrouted_model["projectGraph"]["edges"][0]["provenance_refs"],
+        "confidence": "high",
+        "derived_by": "adversarial test mutation",
+    })
+    misrouted_model["snapshot"]["contracts"][0]["supporting_edge_ids"] = ["edge_runtime_to_reporter_misroute"]
+    assert "misrouted_contract_edge" in {
+        issue["code"] for issue in evaluate_project_model_v1_quality(misrouted_model)
+    }
+
+
+def test_project_model_v1_runner_reports_quality_expectations_without_single_score():
+    from arena.project_model_fixtures import run_project_model_v1_fixture_checks
+
+    report = run_project_model_v1_fixture_checks(Path("fixtures/project_model_v1"))
+
+    assert report["summary"] == {
+        "n_fixtures": 12,
+        "f_label_matches": "12/12",
+        "signal_matches": "12/12",
+        "v1_quality_expectation_matches": "12/12",
+        "v1_valid_quality_passes": "5/5",
+        "overall_pass": True,
+    }
+    assert "overall_score" not in report["summary"]
+    assert {row["fixture_id"] for row in report["fixtures"]} == set(report["metadata"]["required_failure_cases"])
+    for row in report["fixtures"]:
+        assert row["signal_mismatches"] == []
+        assert row["v1_quality_expectation_match"] is True
+
+
+def test_project_model_v1_signal_comparison_reports_field_level_mismatches(tmp_path):
+    from arena.project_model_fixtures import load_project_model_v1_fixture, run_project_model_v1_fixture_checks
+
+    fixture = load_project_model_v1_fixture(
+        Path("fixtures/project_model_v1/F3_project_model_v1_code_too_narrow/manifest.yaml")
+    )
+    observed_dir = tmp_path / "observed"
+    observed_dir.mkdir()
+    observed = json.loads(json.dumps(fixture.observed_signal))
+    observed["fLabelHint"]["label"] = "F1"
+    observed["componentAlignment"][0]["status"] = "aligned"
+    (observed_dir / f"{fixture.id}.json").write_text(json.dumps(observed, indent=2) + "\n")
+
+    report = run_project_model_v1_fixture_checks(
+        Path("fixtures/project_model_v1/F3_project_model_v1_code_too_narrow"),
+        observed_dir=observed_dir,
+    )
+
+    row = report["fixtures"][0]
+    assert report["summary"]["overall_pass"] is False
+    assert row["f_label_match"] is False
+    assert {mismatch["field"] for mismatch in row["signal_mismatches"]} >= {
+        "fLabelHint.label",
+        "componentAlignment.runtime_patch_surface.status",
+    }
+
+
+def test_project_model_combined_exercise_reports_v0_and_v1_separately(capsys):
+    from arena.project_model_fixtures import combined_main, main
+
+    assert main(["--json"]) == 0
+    legacy_v0 = json.loads(capsys.readouterr().out)
+    assert set(legacy_v0) == {"metadata", "summary", "fixtures"}
+    assert legacy_v0["summary"]["n_fixtures"] == 5
+
+    assert combined_main(["--json"]) == 0
+    combined = json.loads(capsys.readouterr().out)
+    assert set(combined) >= {"metadata", "summary", "fixtures", "combined_summary", "suites"}
+    assert combined["summary"] == combined["suites"]["project_model_v0"]["summary"]
+    assert combined["suites"]["project_model_v0"]["summary"]["n_fixtures"] == 5
+    assert combined["suites"]["project_model_v1"]["summary"]["n_fixtures"] == 12
+    assert combined["combined_summary"]["overall_pass"] is True
+
+
 PROJECT_FIXTURE_ROOT = Path("fixtures/project_model_v0/F1_project_model_aligned")
 
 

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "project-model-v1-calibration-signal/v0",
+  "projectModelId": "arena_calibration_F3_project_model_v1_code_too_narrow",
+  "candidateId": "F3_project_model_v1_code_too_narrow_candidate",
+  "componentAlignment": [
+    {
+      "componentId": "runtime_patch_surface",
+      "status": "misaligned",
+      "explanation": "runtime_patch_surface: misaligned",
+      "evidenceRefs": [
+        "project_model.json",
+        "manifest.yaml"
+      ]
+    },
+    {
+      "componentId": "v1_checker",
+      "status": "partial",
+      "explanation": "v1_checker: partial",
+      "evidenceRefs": [
+        "project_model.json",
+        "manifest.yaml"
+      ]
+    },
+    {
+      "componentId": "fixture_reporter",
+      "status": "missing",
+      "explanation": "fixture_reporter: missing",
+      "evidenceRefs": [
+        "project_model.json",
+        "manifest.yaml"
+      ]
+    }
+  ],
+  "invariantViolations": [],
+  "dependencyViolations": [],
+  "unsupportedAssumptions": [],
+  "evidenceGroundingGaps": [],
+  "nearNeighborResistance": [
+    {
+      "alternativeId": "near_patch_only",
+      "status": "distinguished",
+      "explanation": "Fixture keeps v1 graph semantics visible."
+    },
+    {
+      "alternativeId": "near_single_score",
+      "status": "distinguished",
+      "explanation": "Fixture keeps v0 and v1 reports separate."
+    }
+  ],
+  "fLabelHint": {
+    "label": "F3",
+    "confidence": "high",
+    "explanation": "This is F3 because the target is real but too narrow for the component graph and contracts."
+  }
+}
