@@ -31,9 +31,9 @@ where ground truth is known by construction?
 
 *Scorer is fooled by construction; Verifier is the catch.
 
-### Project Model v0 advisory-signal fixtures
+### Project Model v0/v1 advisory-signal fixtures
 
-The Project Model fixture set lives under `fixtures/project_model_v0/` so the
+The Project Model v0 fixture set lives under `fixtures/project_model_v0/` so the
 legacy patch-fixture loader continues to see only the four patch fixtures. These
 fixtures target the parent contract documented in build-arena issue #2 and
 `docs/schemas/project-model-v0.schema.json` on branch `issue-2-project-model-v0`;
@@ -60,6 +60,17 @@ F3 is pre-code proposal-reasoning failure. Code patches are only one example.
 The Project Model fixtures include both a code-adjacent too-narrow tokenizer
 case and a non-code process/sequence case.
 
+Project Model v1 coverage lives under `fixtures/project_model_v1/` and targets
+Build Arena issue #4 / `schemaVersion: project-model/v1`. The v1 checker first
+validates against the vendored, hash-pinned Build Arena schema at
+`docs/schemas/project-model-v1.schema.json` (source commit recorded in
+`docs/schemas/project-model-v1.schema.source.yaml`), then applies deterministic
+calibration checks for graph contracts, provenance refs, held-out probe metadata,
+critical gap/gate consistency, and protected/generated/schema ownership leaks.
+The v1 suite is separate from v0 and includes the issue-required F1/F2/F3/F4
+cases plus fabricated provenance, missing/reversed/self-referential contracts,
+weak probes, mislabeled verification gaps, and protected ownership leaks.
+
 ## Status
 
 - [x] F1 load_bearing_good
@@ -68,6 +79,8 @@ case and a non-code process/sequence case.
 - [x] F4 trivial
 - [x] Project Model v0 F1/F2/F3/F4 advisory-signal fixtures
 - [x] Project Model v0 hermetic signal checker
+- [x] Project Model v1 F1/F2/F3/F4 fixtures and semantic failure coverage
+- [x] Project Model v1 vendored-schema checker and separate v0/v1 reporting
 - [x] Scorer
 - [x] Runner
 - [x] Verifier (Lanham four-test, Haiku-driven worker, Opus judge)
@@ -89,10 +102,18 @@ signal compatibility, not a live Elenchus call and not a truth oracle.
 ```
 python exercise_project_model_fixtures.py
 python exercise_project_model_fixtures.py --json
-python exercise_project_model_fixtures.py --observed-dir path/to/elenchus-signals
+python exercise_project_model_fixtures.py --suite v0 --json
+python exercise_project_model_fixtures.py --suite v1 --json
+python exercise_project_model_fixtures.py --v0-observed-dir path/to/v0-elenchus-signals
+python exercise_project_model_fixtures.py --v1-observed-dir path/to/v1-elenchus-signals
 ```
 
-When `--observed-dir` is supplied, the checker reads `<fixture-id>.json` files
+Without a `--suite` option the command runs both suites and reports v0 and v1
+separately. The JSON output keeps the legacy v0 `metadata` / `summary` /
+`fixtures` keys at top level for compatibility and adds `suites.project_model_v0`,
+`suites.project_model_v1`, and `combined_summary`.
+
+When an observed-dir is supplied, the checker reads `<fixture-id>.json` files
 from that directory and compares those actual Elenchus-style outputs against the
 fixture expectations. Without it, the fixture-local `observed_advisory_signal.json`
 files provide the hermetic default.

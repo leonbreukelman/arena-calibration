@@ -1,0 +1,345 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arena.local/schemas/project-model-v1.schema.json",
+  "title": "Project Model v1",
+  "description": "Primary enriched project-model contract for Build Arena AI decomposer snapshots; v0 remains a legacy compatibility projection.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "project",
+    "snapshot",
+    "projectGraph",
+    "gateReport",
+    "provenance",
+    "hashes",
+    "models",
+    "derivedArtifacts",
+    "compatibility"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "project-model/v1" },
+    "id": { "$ref": "#/$defs/nonEmptyString" },
+    "project": { "$ref": "#/$defs/project" },
+    "snapshot": { "$ref": "#/$defs/snapshot" },
+    "projectGraph": { "$ref": "#/$defs/projectGraph" },
+    "gateReport": { "$ref": "#/$defs/gateReport" },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "hashes": { "$ref": "#/$defs/hashes" },
+    "models": { "$ref": "#/$defs/models" },
+    "derivedArtifacts": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/derivedArtifact" }
+    },
+    "compatibility": { "$ref": "#/$defs/compatibility" }
+  },
+  "$defs": {
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "maybeString": { "type": ["string", "null"] },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "stringArray": { "type": "array", "items": { "type": "string" } },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "projectRoot", "goal", "nonGoals"],
+      "properties": {
+        "projectId": { "$ref": "#/$defs/nonEmptyString" },
+        "projectRoot": { "$ref": "#/$defs/nonEmptyString" },
+        "goal": { "$ref": "#/$defs/nonEmptyString" },
+        "nonGoals": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_id",
+        "project_root",
+        "goal",
+        "non_goals",
+        "primary_model_id",
+        "graph_hash",
+        "schema_version",
+        "snapshot_id",
+        "created_at_utc",
+        "components",
+        "contracts",
+        "cross_cutting_concerns",
+        "observable_checks",
+        "held_out_probes",
+        "verification_gaps",
+        "near_neighbor_alternatives",
+        "acceptance_command_allowlist",
+        "prompt_hashes",
+        "model_output_hashes",
+        "input_hashes"
+      ],
+      "properties": {
+        "project_id": { "$ref": "#/$defs/nonEmptyString" },
+        "project_root": { "$ref": "#/$defs/nonEmptyString" },
+        "goal": { "$ref": "#/$defs/nonEmptyString" },
+        "non_goals": { "$ref": "#/$defs/stringArray" },
+        "primary_model_id": { "$ref": "#/$defs/nonEmptyString" },
+        "graph_hash": { "$ref": "#/$defs/sha256" },
+        "schema_version": { "const": "project-model-snapshot/v0.1" },
+        "snapshot_id": { "$ref": "#/$defs/nonEmptyString" },
+        "created_at_utc": { "$ref": "#/$defs/nonEmptyString" },
+        "components": { "type": "array", "items": { "$ref": "#/$defs/component" } },
+        "contracts": { "type": "array", "items": { "$ref": "#/$defs/contract" } },
+        "cross_cutting_concerns": { "type": "array", "items": { "$ref": "#/$defs/crossCuttingConcern" } },
+        "observable_checks": { "type": "array", "items": { "$ref": "#/$defs/observableCheck" } },
+        "held_out_probes": { "type": "array", "items": { "$ref": "#/$defs/heldOutProbe" } },
+        "verification_gaps": { "type": "array", "items": { "$ref": "#/$defs/verificationGap" } },
+        "near_neighbor_alternatives": { "type": "array", "items": { "$ref": "#/$defs/nearNeighborAlternative" } },
+        "acceptance_command_allowlist": { "$ref": "#/$defs/stringArray" },
+        "prompt_hashes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/sha256" } },
+        "model_output_hashes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/sha256" } },
+        "input_hashes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/sha256" } }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "responsibility", "owned_node_ids", "provenance_refs", "contract_ids", "check_ids", "verification_gap_ids"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "responsibility": { "$ref": "#/$defs/nonEmptyString" },
+        "owned_node_ids": { "$ref": "#/$defs/stringArray" },
+        "provenance_refs": { "$ref": "#/$defs/stringArray" },
+        "contract_ids": { "$ref": "#/$defs/stringArray" },
+        "check_ids": { "$ref": "#/$defs/stringArray" },
+        "verification_gap_ids": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "from_component_id", "to_component_id", "supporting_edge_ids", "near_neighbor_alternative_ids", "provenance_refs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "from_component_id": { "$ref": "#/$defs/nonEmptyString" },
+        "to_component_id": { "$ref": "#/$defs/nonEmptyString" },
+        "supporting_edge_ids": { "$ref": "#/$defs/stringArray" },
+        "near_neighbor_alternative_ids": { "$ref": "#/$defs/stringArray" },
+        "provenance_refs": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+    "crossCuttingConcern": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "category", "description", "component_ids", "contract_ids", "provenance_refs", "triggered_by"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "category": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "component_ids": { "$ref": "#/$defs/stringArray" },
+        "contract_ids": { "$ref": "#/$defs/stringArray" },
+        "provenance_refs": { "$ref": "#/$defs/stringArray" },
+        "triggered_by": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+    "observableCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "command", "component_ids", "contract_ids", "provenance_refs", "safe_to_run_by_default", "requires_network", "requires_paid_api"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "command": { "$ref": "#/$defs/nonEmptyString" },
+        "component_ids": { "$ref": "#/$defs/stringArray" },
+        "contract_ids": { "$ref": "#/$defs/stringArray" },
+        "provenance_refs": { "$ref": "#/$defs/stringArray" },
+        "acceptance_command_id": { "$ref": "#/$defs/maybeString" },
+        "safe_to_run_by_default": { "type": "boolean" },
+        "requires_network": { "type": "boolean" },
+        "requires_paid_api": { "type": "boolean" }
+      }
+    },
+    "heldOutProbe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "target_component_ids", "target_contract_ids", "builder_model_id", "builder_prompt_hash", "builder_independent_from_decomposer", "planted_negative_id", "discrimination_passed", "golden_control_passed", "hidden_from_primary_decomposer", "provenance_refs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "target_component_ids": { "$ref": "#/$defs/stringArray" },
+        "target_contract_ids": { "$ref": "#/$defs/stringArray" },
+        "builder_model_id": { "$ref": "#/$defs/nonEmptyString" },
+        "builder_prompt_hash": { "$ref": "#/$defs/sha256" },
+        "builder_independent_from_decomposer": { "type": "boolean" },
+        "planted_negative_id": { "$ref": "#/$defs/nonEmptyString" },
+        "discrimination_passed": { "type": "boolean" },
+        "golden_control_passed": { "type": "boolean" },
+        "hidden_from_primary_decomposer": { "type": "boolean" },
+        "provenance_refs": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+    "verificationGap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "severity", "component_ids", "contract_ids", "provenance_refs", "proposed_closure_check"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "severity": { "enum": ["info", "low", "medium", "high", "blocker", "critical"] },
+        "component_ids": { "$ref": "#/$defs/stringArray" },
+        "contract_ids": { "$ref": "#/$defs/stringArray" },
+        "provenance_refs": { "$ref": "#/$defs/stringArray" },
+        "proposed_closure_check": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "nearNeighborAlternative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "target_id", "alternative", "why_not_primary", "provenance_refs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "target_id": { "$ref": "#/$defs/nonEmptyString" },
+        "alternative": { "$ref": "#/$defs/nonEmptyString" },
+        "why_not_primary": { "$ref": "#/$defs/nonEmptyString" },
+        "provenance_refs": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+    "projectGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "graphHash", "projectRoot", "nodes", "edges"],
+      "properties": {
+        "schemaVersion": { "$ref": "#/$defs/nonEmptyString" },
+        "graphHash": { "$ref": "#/$defs/sha256" },
+        "projectRoot": { "$ref": "#/$defs/nonEmptyString" },
+        "nodes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/graphNode" } },
+        "edges": { "type": "array", "items": { "$ref": "#/$defs/graphEdge" } }
+      }
+    },
+    "graphNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "label", "path", "symbol", "tags", "provenance_refs"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "kind": { "$ref": "#/$defs/nonEmptyString" },
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "path": { "$ref": "#/$defs/maybeString" },
+        "symbol": { "$ref": "#/$defs/maybeString" },
+        "tags": { "$ref": "#/$defs/stringArray" },
+        "provenance_refs": { "type": "array", "items": { "$ref": "#/$defs/provenanceRef" } }
+      }
+    },
+    "graphEdge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "from_node_id", "to_node_id", "label", "provenance_refs", "confidence", "derived_by"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "kind": { "$ref": "#/$defs/nonEmptyString" },
+        "from_node_id": { "$ref": "#/$defs/nonEmptyString" },
+        "to_node_id": { "$ref": "#/$defs/nonEmptyString" },
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "provenance_refs": { "type": "array", "items": { "$ref": "#/$defs/provenanceRef" } },
+        "confidence": { "$ref": "#/$defs/nonEmptyString" },
+        "derived_by": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "provenanceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source_type", "derived_by", "confidence", "content_hash", "path", "line_start", "line_end", "git_oid", "dirty"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "source_type": { "$ref": "#/$defs/nonEmptyString" },
+        "derived_by": { "$ref": "#/$defs/nonEmptyString" },
+        "confidence": { "$ref": "#/$defs/nonEmptyString" },
+        "content_hash": { "$ref": "#/$defs/sha256" },
+        "path": { "$ref": "#/$defs/maybeString" },
+        "line_start": { "type": ["integer", "null"], "minimum": 1 },
+        "line_end": { "type": ["integer", "null"], "minimum": 1 },
+        "git_oid": { "$ref": "#/$defs/maybeString" },
+        "dirty": { "type": "boolean" }
+      }
+    },
+    "gateReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "violations"],
+      "properties": {
+        "passed": { "type": "boolean" },
+        "violations": { "type": "array", "items": { "$ref": "#/$defs/gateViolation" } }
+      }
+    },
+    "gateViolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate", "severity", "message", "location"],
+      "properties": {
+        "gate": { "$ref": "#/$defs/nonEmptyString" },
+        "severity": { "$ref": "#/$defs/nonEmptyString" },
+        "message": { "$ref": "#/$defs/nonEmptyString" },
+        "location": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["git", "provenanceRefStrategy"],
+      "properties": {
+        "git": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["available", "root", "headOid", "dirty", "dirtyPaths", "dirtyStateFingerprint"],
+          "properties": {
+            "available": { "type": "boolean" },
+            "root": { "$ref": "#/$defs/maybeString" },
+            "headOid": { "$ref": "#/$defs/maybeString" },
+            "dirty": { "type": "boolean" },
+            "dirtyPaths": { "$ref": "#/$defs/stringArray" },
+            "dirtyStateFingerprint": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "provenanceRefStrategy": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputHashes", "promptHashes", "outputHashes", "artifactHashes"],
+      "properties": {
+        "inputHashes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/sha256" } },
+        "promptHashes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/sha256" } },
+        "outputHashes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/sha256" } },
+        "artifactHashes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/sha256" } }
+      }
+    },
+    "models": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary", "probeBuilders"],
+      "properties": {
+        "primary": { "$ref": "#/$defs/nonEmptyString" },
+        "probeBuilders": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+    "derivedArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifactType", "path", "strategy"],
+      "properties": {
+        "artifactType": { "enum": ["jsonl-events", "sqlite-projection", "markdown-summary", "json", "dxf", "other"] },
+        "path": { "$ref": "#/$defs/nonEmptyString" },
+        "strategy": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectModelV0Path", "projectModelV0Role"],
+      "properties": {
+        "projectModelV0Path": { "$ref": "#/$defs/nonEmptyString" },
+        "projectModelV0Role": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    }
+  }
+}

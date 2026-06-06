@@ -1,0 +1,6 @@
+source_repo: leonbreukelman/build-arena
+source_commit: 6aab52cc3a92ad65efe645ac6dd5e20338e96999
+source_path: docs/schemas/project-model-v1.schema.json
+source_branch_observed: coverage-100
+schema_sha256: 6d82e8635839bbc110014c844c842ba03913a7be0c0aea411d25a147a30aa38b
+schema_draft: https://json-schema.org/draft/2020-12/schema

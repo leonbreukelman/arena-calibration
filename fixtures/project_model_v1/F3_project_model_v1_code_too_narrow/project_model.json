@@ -1,0 +1,484 @@
+{
+  "schemaVersion": "project-model/v1",
+  "id": "arena_calibration_F3_project_model_v1_code_too_narrow",
+  "project": {
+    "projectId": "arena-calibration-project-model-v1",
+    "projectRoot": "/home/leonb/projects/arena-calibration",
+    "goal": "Calibrate Build Arena Project Model v1 outputs with hermetic v0/v1 fixture reports.",
+    "nonGoals": [
+      "Do not replace Project Model v0 fixtures.",
+      "Do not run live or paid provider calls during default verification."
+    ]
+  },
+  "snapshot": {
+    "project_id": "arena-calibration-project-model-v1",
+    "project_root": "/home/leonb/projects/arena-calibration",
+    "goal": "Calibrate Build Arena Project Model v1 outputs with hermetic v0/v1 fixture reports.",
+    "non_goals": [
+      "Do not replace Project Model v0 fixtures.",
+      "Do not run live or paid provider calls during default verification."
+    ],
+    "primary_model_id": "local-fixture-primary-decomposer",
+    "graph_hash": "9fec0500eb8a3b7b56bb73458def093131b8fafc87bd1488cede82a67ea94b71",
+    "schema_version": "project-model-snapshot/v0.1",
+    "snapshot_id": "arena_calibration_F3_project_model_v1_code_too_narrow-snapshot",
+    "created_at_utc": "2026-06-06T00:00:00Z",
+    "components": [
+      {
+        "id": "runtime_patch_surface",
+        "name": "Runtime patch surface",
+        "responsibility": "Represent the user-visible implementation target without collapsing it into generated/protected surfaces.",
+        "owned_node_ids": [
+          "n_runtime_patch_surface"
+        ],
+        "provenance_refs": [
+          "p_runtime"
+        ],
+        "contract_ids": [
+          "contract_runtime_to_checker"
+        ],
+        "check_ids": [
+          "check_runtime_scope"
+        ],
+        "verification_gap_ids": []
+      },
+      {
+        "id": "v1_checker",
+        "name": "Project Model v1 checker",
+        "responsibility": "Validate v1 fixture schema, graph, contracts, provenance, probes, and gate consistency.",
+        "owned_node_ids": [
+          "n_project_model_checker"
+        ],
+        "provenance_refs": [
+          "p_checker"
+        ],
+        "contract_ids": [
+          "contract_runtime_to_checker",
+          "contract_checker_to_reporter"
+        ],
+        "check_ids": [
+          "check_v1_semantics"
+        ],
+        "verification_gap_ids": []
+      },
+      {
+        "id": "fixture_reporter",
+        "name": "Fixture exercise reporter",
+        "responsibility": "Expose Project Model v0 and v1 suite results separately without hiding mismatches behind a single score.",
+        "owned_node_ids": [
+          "n_fixture_reporter"
+        ],
+        "provenance_refs": [
+          "p_reporter"
+        ],
+        "contract_ids": [
+          "contract_checker_to_reporter"
+        ],
+        "check_ids": [
+          "check_report_separation"
+        ],
+        "verification_gap_ids": []
+      }
+    ],
+    "contracts": [
+      {
+        "id": "contract_runtime_to_checker",
+        "name": "Runtime evidence feeds checker",
+        "from_component_id": "runtime_patch_surface",
+        "to_component_id": "v1_checker",
+        "supporting_edge_ids": [
+          "edge_runtime_to_checker"
+        ],
+        "near_neighbor_alternative_ids": [
+          "near_patch_only"
+        ],
+        "provenance_refs": [
+          "p_contract_runtime_checker"
+        ]
+      },
+      {
+        "id": "contract_checker_to_reporter",
+        "name": "Checker output feeds reporter",
+        "from_component_id": "v1_checker",
+        "to_component_id": "fixture_reporter",
+        "supporting_edge_ids": [
+          "edge_checker_to_reporter"
+        ],
+        "near_neighbor_alternative_ids": [
+          "near_single_score"
+        ],
+        "provenance_refs": [
+          "p_contract_checker_reporter"
+        ]
+      }
+    ],
+    "cross_cutting_concerns": [
+      {
+        "id": "concern_no_live_calls",
+        "category": "cost-control",
+        "description": "Default calibration verification remains hermetic and does not invoke live providers.",
+        "component_ids": [
+          "v1_checker",
+          "fixture_reporter"
+        ],
+        "contract_ids": [
+          "contract_checker_to_reporter"
+        ],
+        "provenance_refs": [
+          "p_checker"
+        ],
+        "triggered_by": [
+          "issue #4 non-goal"
+        ]
+      }
+    ],
+    "observable_checks": [
+      {
+        "id": "check_runtime_scope",
+        "description": "Fixture explicitly distinguishes mutable runtime code from protected/generated/schema surfaces.",
+        "command": "uv run pytest tests/test_project_model_fixtures.py -q",
+        "component_ids": [
+          "runtime_patch_surface"
+        ],
+        "contract_ids": [
+          "contract_runtime_to_checker"
+        ],
+        "provenance_refs": [
+          "p_runtime"
+        ],
+        "acceptance_command_id": "pytest_project_model_fixtures",
+        "safe_to_run_by_default": true,
+        "requires_network": false,
+        "requires_paid_api": false
+      },
+      {
+        "id": "check_v1_semantics",
+        "description": "Checker rejects required v1 semantic failures with deterministic issue codes.",
+        "command": "uv run pytest tests/test_project_model_fixtures.py::test_project_model_v1_quality_gate_reports_expected_issue_codes_exactly_and_deterministically -q",
+        "component_ids": [
+          "v1_checker"
+        ],
+        "contract_ids": [
+          "contract_runtime_to_checker",
+          "contract_checker_to_reporter"
+        ],
+        "provenance_refs": [
+          "p_checker"
+        ],
+        "acceptance_command_id": "pytest_project_model_v1_quality",
+        "safe_to_run_by_default": true,
+        "requires_network": false,
+        "requires_paid_api": false
+      },
+      {
+        "id": "check_report_separation",
+        "description": "Exercise command reports v0 and v1 separately in JSON and text.",
+        "command": "uv run python exercise_project_model_fixtures.py --json",
+        "component_ids": [
+          "fixture_reporter"
+        ],
+        "contract_ids": [
+          "contract_checker_to_reporter"
+        ],
+        "provenance_refs": [
+          "p_reporter"
+        ],
+        "acceptance_command_id": "exercise_project_model_fixtures_json",
+        "safe_to_run_by_default": true,
+        "requires_network": false,
+        "requires_paid_api": false
+      }
+    ],
+    "held_out_probes": [
+      {
+        "id": "probe_contract_direction",
+        "target_component_ids": [
+          "v1_checker"
+        ],
+        "target_contract_ids": [
+          "contract_runtime_to_checker"
+        ],
+        "builder_model_id": "local-fixture-probe-builder",
+        "builder_prompt_hash": "f012df45d68a6985b18c5dbea7faabdeb3bedb635a89cb1ed8b139445d7cb462",
+        "builder_independent_from_decomposer": true,
+        "planted_negative_id": "negative_reversed_contract_direction",
+        "discrimination_passed": true,
+        "golden_control_passed": true,
+        "hidden_from_primary_decomposer": true,
+        "provenance_refs": [
+          "p_probe"
+        ]
+      }
+    ],
+    "verification_gaps": [],
+    "near_neighbor_alternatives": [
+      {
+        "id": "near_patch_only",
+        "target_id": "contract_runtime_to_checker",
+        "alternative": "Treat Project Model v1 as another patch-level fixture only.",
+        "why_not_primary": "The issue requires graph, contract, provenance, held-out-probe, and reporting semantics.",
+        "provenance_refs": [
+          "p_contract_runtime_checker"
+        ]
+      },
+      {
+        "id": "near_single_score",
+        "target_id": "contract_checker_to_reporter",
+        "alternative": "Collapse v0 and v1 into one aggregate pass/fail score.",
+        "why_not_primary": "Separate suite visibility is an explicit acceptance criterion.",
+        "provenance_refs": [
+          "p_contract_checker_reporter"
+        ]
+      }
+    ],
+    "acceptance_command_allowlist": [
+      "uv run pytest -q",
+      "uv run python exercise_project_model_fixtures.py --json"
+    ],
+    "prompt_hashes": {
+      "fixture_generator": "77e09fcc856fa628b4e6f039850e465e67259050ab3140c70101d1a94b4948c7"
+    },
+    "model_output_hashes": {
+      "fixture_output": "86f6dd80462e1ef3ea4f725d3889ede47b3aa8fe67ec9884e61949b78877d7da"
+    },
+    "input_hashes": {
+      "issue_4": "402023784b771434ada56cb9f04e594a604084bd0a17f7869917a0e25048d954"
+    }
+  },
+  "projectGraph": {
+    "schemaVersion": "project-graph/v0.1",
+    "graphHash": "9fec0500eb8a3b7b56bb73458def093131b8fafc87bd1488cede82a67ea94b71",
+    "projectRoot": "/home/leonb/projects/arena-calibration",
+    "nodes": [
+      {
+        "id": "n_runtime_patch_surface",
+        "kind": "source",
+        "label": "Runtime patch surface",
+        "path": "arena/runtime_patch_surface.py",
+        "symbol": "RuntimePatchSurface",
+        "tags": [
+          "mutable",
+          "runtime"
+        ],
+        "provenance_refs": [
+          {
+            "id": "p_runtime",
+            "source_type": "fixture",
+            "derived_by": "arena-calibration hermetic fixture generator",
+            "confidence": "high",
+            "content_hash": "5f47883e405b8e68812f5e44e2e24d72007d250ff1f581e30282d11d849fc0a8",
+            "path": "arena/runtime_patch_surface.py",
+            "line_start": 1,
+            "line_end": 10,
+            "git_oid": "27fd466a5a2395dc432750b57ba1bd85ca804686cfd6a021f57ea558d31dfc35",
+            "dirty": false
+          }
+        ]
+      },
+      {
+        "id": "n_project_model_checker",
+        "kind": "source",
+        "label": "Project Model v1 checker",
+        "path": "arena/project_model_fixtures.py",
+        "symbol": "evaluate_project_model_v1_quality",
+        "tags": [
+          "checker",
+          "calibration"
+        ],
+        "provenance_refs": [
+          {
+            "id": "p_checker",
+            "source_type": "fixture",
+            "derived_by": "arena-calibration hermetic fixture generator",
+            "confidence": "high",
+            "content_hash": "3de67f3bf21d2c668198db947781afa3645c40b21103122e23f8b4fdf5f1be59",
+            "path": "arena/project_model_fixtures.py",
+            "line_start": 1,
+            "line_end": 10,
+            "git_oid": "175bd0d2e88367764258c299f2db03e48a438c2fef61d4e91e374b725693d72b",
+            "dirty": false
+          },
+          {
+            "id": "p_probe",
+            "source_type": "fixture",
+            "derived_by": "arena-calibration hermetic fixture generator",
+            "confidence": "high",
+            "content_hash": "55854362b534d2b7743156f3d365b3ed87fa247d096444420facd987616a75e6",
+            "path": "fixtures/project_model_v1/README.md",
+            "line_start": 1,
+            "line_end": 4,
+            "git_oid": "0ea1967a2c054cf4548fc521e64dbc4c44dfe3659c36ba5a11b4627c06cb21cb",
+            "dirty": false
+          },
+          {
+            "id": "p_gap",
+            "source_type": "fixture",
+            "derived_by": "arena-calibration hermetic fixture generator",
+            "confidence": "high",
+            "content_hash": "7a609fb2d27b27aaccdb5fe0d8cc0030032319ce76825e9123500bf5e7d708c7",
+            "path": "fixtures/project_model_v1/verification-gap.md",
+            "line_start": 1,
+            "line_end": 3,
+            "git_oid": "74f3087c7ead2eab33ca7fda2fc389a728897554e8e2fde07f9f92ad0afe3c5b",
+            "dirty": false
+          }
+        ]
+      },
+      {
+        "id": "n_fixture_reporter",
+        "kind": "source",
+        "label": "Fixture exercise reporter",
+        "path": "exercise_project_model_fixtures.py",
+        "symbol": "combined_main",
+        "tags": [
+          "reporting",
+          "calibration"
+        ],
+        "provenance_refs": [
+          {
+            "id": "p_reporter",
+            "source_type": "fixture",
+            "derived_by": "arena-calibration hermetic fixture generator",
+            "confidence": "high",
+            "content_hash": "c71b99a057b084268d248a2a3aeaf33faef158981a15a7186c23071636290505",
+            "path": "exercise_project_model_fixtures.py",
+            "line_start": 1,
+            "line_end": 10,
+            "git_oid": "430144d22404064fef76d44b23bd9fb178bac89d829a0964c7a00b944c12c359",
+            "dirty": false
+          }
+        ]
+      },
+      {
+        "id": "n_build_arena_schema",
+        "kind": "schema",
+        "label": "Build Arena Project Model v1 schema",
+        "path": "docs/schemas/project-model-v1.schema.json",
+        "symbol": null,
+        "tags": [
+          "protected",
+          "schema",
+          "generated"
+        ],
+        "provenance_refs": [
+          {
+            "id": "p_schema",
+            "source_type": "fixture",
+            "derived_by": "arena-calibration hermetic fixture generator",
+            "confidence": "high",
+            "content_hash": "03950585f2d42b46c751b3d00daf5690220e4d8b9839275348c0507422f86c34",
+            "path": "docs/schemas/project-model-v1.schema.json",
+            "line_start": 1,
+            "line_end": 10,
+            "git_oid": "c6299b054905facb1c4d6582ef65a152a6fc39776fb8844a001b624ca5477388",
+            "dirty": false
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge_runtime_to_checker",
+        "kind": "feeds",
+        "from_node_id": "n_runtime_patch_surface",
+        "to_node_id": "n_project_model_checker",
+        "label": "Runtime proposal evidence feeds the v1 checker",
+        "provenance_refs": [
+          {
+            "id": "p_contract_runtime_checker",
+            "source_type": "fixture",
+            "derived_by": "arena-calibration hermetic fixture generator",
+            "confidence": "high",
+            "content_hash": "cb5d2b0aca649689772f0139022c0199858a4e6b126970048af8904cb595eef0",
+            "path": "docs/specs/project-model-v1-contract.md",
+            "line_start": 11,
+            "line_end": 18,
+            "git_oid": "d825c55bf79030af964d1ff26ce58153393571a2ea70f8c06a33e28235526619",
+            "dirty": false
+          }
+        ],
+        "confidence": "high",
+        "derived_by": "arena-calibration fixture graph"
+      },
+      {
+        "id": "edge_checker_to_reporter",
+        "kind": "feeds",
+        "from_node_id": "n_project_model_checker",
+        "to_node_id": "n_fixture_reporter",
+        "label": "Checker output feeds the fixture reporter",
+        "provenance_refs": [
+          {
+            "id": "p_contract_checker_reporter",
+            "source_type": "fixture",
+            "derived_by": "arena-calibration hermetic fixture generator",
+            "confidence": "high",
+            "content_hash": "ab0eef0a2cfb6b69a903fd4a582d29c492d8ba54dd2540fe046c5af7bf2a325c",
+            "path": "docs/specs/project-model-v1-contract.md",
+            "line_start": 19,
+            "line_end": 28,
+            "git_oid": "1e7647f5251c4a08308d1636b867f96ca0d07815c3366f11dd27c794f8dc3356",
+            "dirty": false
+          }
+        ],
+        "confidence": "high",
+        "derived_by": "arena-calibration fixture graph"
+      }
+    ]
+  },
+  "gateReport": {
+    "passed": true,
+    "violations": []
+  },
+  "provenance": {
+    "git": {
+      "available": true,
+      "root": "/home/leonb/projects/arena-calibration",
+      "headOid": "db9ff629d7607e5340f38301de46cba6897a6c4c31a9cdf04acc997b7878b307",
+      "dirty": false,
+      "dirtyPaths": [],
+      "dirtyStateFingerprint": "d0ed675e617480ebebffcae4c5c356b925c48f4f4618fdb18ca8b2d713978e2b"
+    },
+    "provenanceRefStrategy": "graph-node-and-edge-local-provenance-ids"
+  },
+  "hashes": {
+    "inputHashes": {
+      "issue_4": "402023784b771434ada56cb9f04e594a604084bd0a17f7869917a0e25048d954"
+    },
+    "promptHashes": {
+      "fixture_generator": "77e09fcc856fa628b4e6f039850e465e67259050ab3140c70101d1a94b4948c7"
+    },
+    "outputHashes": {
+      "fixture_output": "86f6dd80462e1ef3ea4f725d3889ede47b3aa8fe67ec9884e61949b78877d7da"
+    },
+    "artifactHashes": {
+      "project_model": "23c2941ef1e5df14a66b3fb6dd68801a250de2f9d7d9a189009a03dd0d4534c3"
+    }
+  },
+  "models": {
+    "primary": "local-fixture-primary-decomposer",
+    "probeBuilders": [
+      "local-fixture-probe-builder"
+    ]
+  },
+  "derivedArtifacts": [
+    {
+      "artifactType": "jsonl-events",
+      "path": "artifacts/project-model-v1-events.jsonl",
+      "strategy": "fixture-local event stream"
+    },
+    {
+      "artifactType": "sqlite-projection",
+      "path": "artifacts/project-model-v1.sqlite",
+      "strategy": "fixture-local relational projection"
+    },
+    {
+      "artifactType": "markdown-summary",
+      "path": "artifacts/project-model-v1.md",
+      "strategy": "fixture-local summary"
+    }
+  ],
+  "compatibility": {
+    "projectModelV0Path": "project-model-v0.json",
+    "projectModelV0Role": "parallel calibration baseline; v1 does not replace v0 fixtures"
+  }
+}

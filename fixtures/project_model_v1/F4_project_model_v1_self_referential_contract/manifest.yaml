@@ -1,0 +1,12 @@
+id: F4_project_model_v1_self_referential_contract
+expected_failure_mode_label: F4
+expected_deep_verification: false
+case_description: A contract points from and to the same component.
+project_model_path: project_model.json
+proposal_path: proposal.md
+public_rationale_path: public_rationale.md
+expected_signal_path: expected_advisory_signal.json
+observed_signal_path: observed_advisory_signal.json
+expected_v1_quality_issue_codes:
+  - self_referential_contract
+label_explanation: A self-referential contract has no useful cross-boundary decomposition value.
