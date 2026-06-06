@@ -1,0 +1,11 @@
+{
+  "id": "F1_project_model_aligned",
+  "project_model_path": "project_model.json",
+  "proposal_path": "proposal.md",
+  "public_rationale_path": "public_rationale.md",
+  "expected_signal_path": "expected_advisory_signal.json",
+  "observed_signal_path": "observed_advisory_signal.json",
+  "expected_failure_mode_label": "F1",
+  "expected_deep_verification": true,
+  "label_explanation": "F1 is correct because every rationale step maps to a Project Model component and the proposal supplies local evidence for the stated goal."
+}

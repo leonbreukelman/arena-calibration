@@ -1,0 +1,11 @@
+{
+  "id": "F4_project_model_trivial",
+  "project_model_path": "project_model.json",
+  "proposal_path": "proposal.md",
+  "public_rationale_path": "public_rationale.md",
+  "expected_signal_path": "expected_advisory_signal.json",
+  "observed_signal_path": "observed_advisory_signal.json",
+  "expected_failure_mode_label": "F4",
+  "expected_deep_verification": false,
+  "label_explanation": "F4 is correct because the proposal is too weak to justify deep advisory verification; it creates no observable fixture artifact."
+}

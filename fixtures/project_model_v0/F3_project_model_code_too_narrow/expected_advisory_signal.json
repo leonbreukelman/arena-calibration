@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "project-model-advisory-signal/v0",
+  "projectModelId": "arena_calibration_tokenizer_f3_model",
+  "candidateId": "f3_project_model_code_too_narrow_candidate",
+  "componentAlignment": [
+    {
+      "componentId": "tokenizer_behavior",
+      "status": "misaligned",
+      "explanation": "The proposal targets the visible tuple rather than general inclusive-span behavior.",
+      "evidenceRefs": [
+        "proposal.md"
+      ]
+    },
+    {
+      "componentId": "generalization_guard",
+      "status": "misaligned",
+      "explanation": "It treats visible test passage as sufficient and misses the held-out probe.",
+      "evidenceRefs": [
+        "project_model.json"
+      ]
+    },
+    {
+      "componentId": "evidence_bundle",
+      "status": "aligned",
+      "explanation": "The visible test evidence exists but is too narrow for the goal.",
+      "evidenceRefs": [
+        "proposal.md"
+      ]
+    }
+  ],
+  "invariantViolations": [],
+  "dependencyViolations": [],
+  "unsupportedAssumptions": [],
+  "evidenceGroundingGaps": [
+    {
+      "checkId": "held_out_tokenizer_probe",
+      "missingEvidence": "No unseen span example result is supplied."
+    },
+    {
+      "checkId": "hardcoded_lookup_negative_control",
+      "missingEvidence": "The hardcoded lookup negative control is not addressed."
+    }
+  ],
+  "nearNeighborResistance": [
+    {
+      "alternativeId": "accept_visible_tests_only",
+      "status": "not-distinguished",
+      "explanation": "The proposal is visible-test acceptance by another name."
+    },
+    {
+      "alternativeId": "tighten_lanham_only",
+      "status": "distinguished",
+      "explanation": "The rationale is load-bearing; the issue is wrong target/generalization."
+    }
+  ],
+  "fLabelHint": {
+    "label": "F3",
+    "confidence": "high",
+    "explanation": "Real load-bearing code-adjacent rationale is aimed at a too-narrow visible example."
+  }
+}

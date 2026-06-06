@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "project-model-advisory-signal/v0",
+  "projectModelId": "arena_calibration_project_model_v0_fixtures",
+  "candidateId": "f4_project_model_trivial_candidate",
+  "componentAlignment": [
+    {
+      "componentId": "contract_consumption",
+      "status": "not-addressed",
+      "explanation": "A TODO does not consume the parent contract.",
+      "evidenceRefs": []
+    },
+    {
+      "componentId": "fixture_manifest",
+      "status": "not-addressed",
+      "explanation": "No fixtures or expected signals are created.",
+      "evidenceRefs": []
+    },
+    {
+      "componentId": "hermetic_harness",
+      "status": "not-addressed",
+      "explanation": "No checker is added.",
+      "evidenceRefs": []
+    },
+    {
+      "componentId": "docs_feedback",
+      "status": "not-addressed",
+      "explanation": "No taxonomy update or feedback artifact exists.",
+      "evidenceRefs": []
+    }
+  ],
+  "invariantViolations": [],
+  "dependencyViolations": [],
+  "unsupportedAssumptions": [],
+  "evidenceGroundingGaps": [
+    {
+      "checkId": "contract_target_check",
+      "missingEvidence": "No Project Model v0 artifact."
+    },
+    {
+      "checkId": "f_label_matrix_check",
+      "missingEvidence": "No fixture label matrix."
+    },
+    {
+      "checkId": "fixture_runner_check",
+      "missingEvidence": "No harness output."
+    }
+  ],
+  "nearNeighborResistance": [
+    {
+      "alternativeId": "decorative_readme_only",
+      "status": "not-distinguished",
+      "explanation": "A TODO is even weaker than the decorative README-only alternative."
+    }
+  ],
+  "fLabelHint": {
+    "label": "F4",
+    "confidence": "high",
+    "explanation": "Weak/trivial proposal rejected before expensive or deep verification."
+  }
+}
